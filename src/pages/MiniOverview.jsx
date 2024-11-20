@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { Container, Table, Form, Button, Card, Modal, Row, Col } from 'react-bootstrap'
-import { faTable, faPlus, faImage } from '@fortawesome/free-solid-svg-icons'
+import { faTable, faPlus, faImage, faPencil, faTrash } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { api } from '../database/db'
 import SearchableSelect from '../components/SearchableSelect'
@@ -16,6 +16,7 @@ const MiniOverview = () => {
   const [error, setError] = useState(null)
   const [existingTags, setExistingTags] = useState([])
   const [productSets, setProductSets] = useState([])
+  const [minis, setMinis] = useState([])
 
   // Form state for new mini
   const [newMini, setNewMini] = useState({
@@ -54,8 +55,23 @@ const MiniOverview = () => {
     types: false
   })
 
+  // Add new state for edit modal
+  const [showEditModal, setShowEditModal] = useState(false)
+  const [editingMini, setEditingMini] = useState(null)
+
+  const fetchMinis = async () => {
+    try {
+      const response = await api.get('/api/minis')
+      setMinis(response.data)
+    } catch (err) {
+      console.error('Error fetching minis:', err)
+      setError(err.message)
+    }
+  }
+
   useEffect(() => {
     fetchData()
+    fetchMinis()
   }, [])
 
   const fetchData = async () => {
@@ -131,7 +147,7 @@ const MiniOverview = () => {
         categories: false,
         types: false
       })
-      fetchData()
+      fetchMinis()
     } catch (err) {
       console.error('Error details:', {
         message: err.message,
@@ -372,6 +388,80 @@ const MiniOverview = () => {
     })
   }
 
+  const handleDeleteMini = async (id) => {
+    if (window.confirm('Are you sure you want to delete this mini?')) {
+      try {
+        await api.delete(`/api/minis/${id}`)
+        fetchMinis()
+      } catch (err) {
+        console.error('Error deleting mini:', err)
+        setError(err.response?.data?.error || err.message)
+      }
+    }
+  }
+
+  // Update the handleEditMini function
+  const handleEditMini = (mini) => {
+    // Get the related data arrays from the comma-separated strings
+    const editMini = {
+      ...mini,
+      categories: [], // Will be populated from the database
+      types: [],
+      proxy_types: [],
+      tags: mini.tag_names ? mini.tag_names.split(',').map(tag => tag.trim()).filter(Boolean) : [],
+      product_sets: []
+    }
+
+    // Fetch the complete mini data with all relationships
+    api.get(`/api/minis/${mini.id}/relationships`)
+      .then(response => {
+        const completeData = {
+          ...editMini,
+          ...response.data,
+          // Ensure tags are properly set from both sources
+          tags: response.data.tags || editMini.tags
+        }
+        setEditingMini(completeData)
+        setShowEditModal(true)
+      })
+      .catch(error => {
+        console.error('Error fetching mini relationships:', error)
+        setError(error.message)
+      })
+  }
+
+  // Add handleUpdateMini function
+  const handleUpdateMini = async (e) => {
+    e.preventDefault()
+    
+    // Reset previous validation errors
+    setError(null)
+    
+    // Check all validations
+    const newValidationErrors = {
+      name: !editingMini.name.trim(),
+      location: !editingMini.location.trim(),
+      categories: editingMini.categories.length === 0,
+      types: editingMini.types.length === 0
+    }
+    
+    setValidationErrors(newValidationErrors)
+    
+    if (Object.values(newValidationErrors).some(Boolean)) {
+      return
+    }
+    
+    try {
+      await api.put(`/api/minis/${editingMini.id}`, editingMini)
+      setShowEditModal(false)
+      setEditingMini(null)
+      fetchMinis()
+    } catch (err) {
+      console.error('Error updating mini:', err)
+      setError(err.response?.data?.error || err.message)
+    }
+  }
+
   if (loading) return <div>Loading...</div>
   if (error) return <div>Error: {error}</div>
 
@@ -396,19 +486,64 @@ const MiniOverview = () => {
           </Button>
         </div>
 
-        <Table hover>
+        <Table hover responsive>
           <thead>
             <tr>
               <th>Name</th>
-              <th>Category</th>
-              <th>Type</th>
-              <th>Product Line</th>
-              <th>Manufacturer</th>
+              <th>Location</th>
+              <th>Categories</th>
+              <th>Types</th>
+              <th>Proxy Types</th>
+              <th>Product Sets</th>
+              <th>Tags</th>
+              <th>Quantity</th>
               <th>Actions</th>
             </tr>
           </thead>
           <tbody>
-            {/* Add sample data or map through actual data */}
+            {minis.map(mini => (
+              <tr key={mini.id}>
+                <td>
+                  {mini.image_path && (
+                    <img 
+                      src={mini.image_path} 
+                      alt={mini.name}
+                      style={{ 
+                        width: '50px', 
+                        height: '50px', 
+                        objectFit: 'cover',
+                        marginRight: '10px'
+                      }}
+                    />
+                  )}
+                  {mini.name}
+                </td>
+                <td>{mini.location}</td>
+                <td>{mini.category_names?.split(',').join(', ')}</td>
+                <td>{mini.type_names?.split(',').join(', ')}</td>
+                <td>{mini.proxy_type_names?.split(',').join(', ')}</td>
+                <td>{mini.product_set_names?.split(',').join(', ')}</td>
+                <td>{mini.tag_names?.split(',').join(', ')}</td>
+                <td>{mini.quantity}</td>
+                <td>
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    className="me-2"
+                    onClick={() => handleEditMini(mini)}
+                  >
+                    <FontAwesomeIcon icon={faPencil} />
+                  </Button>
+                  <Button
+                    variant="danger"
+                    size="sm"
+                    onClick={() => handleDeleteMini(mini.id)}
+                  >
+                    <FontAwesomeIcon icon={faTrash} />
+                  </Button>
+                </td>
+              </tr>
+            ))}
           </tbody>
         </Table>
       </div>
@@ -780,6 +915,356 @@ const MiniOverview = () => {
           </Button>
           <Button variant="primary" onClick={handleAddMini}>
             Add Mini
+          </Button>
+        </Modal.Footer>
+      </Modal>
+
+      {/* Edit Mini Modal */}
+      <Modal show={showEditModal} onHide={() => setShowEditModal(false)} size="lg">
+        <Modal.Header closeButton>
+          <Modal.Title>Edit Mini</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <Form onSubmit={handleUpdateMini}>
+            {/* Basic Information Card */}
+            <Card className="mb-3">
+              <Card.Header className="bg-light d-flex align-items-center">
+                <h6 className="mb-0">Basic Information</h6>
+              </Card.Header>
+              <Card.Body>
+                <Row>
+                  <Col md={3}>
+                    <div 
+                      className="image-drop-zone"
+                      style={{
+                        height: '76px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: 'pointer',
+                        position: 'relative'
+                      }}
+                      onClick={() => document.getElementById('edit-image-upload').click()}
+                      onDragOver={(e) => {
+                        e.preventDefault()
+                        e.currentTarget.classList.add('dragging')
+                      }}
+                      onDragLeave={(e) => {
+                        e.preventDefault()
+                        e.currentTarget.classList.remove('dragging')
+                      }}
+                      onDrop={(e) => {
+                        e.preventDefault()
+                        e.currentTarget.classList.remove('dragging')
+                        const file = e.dataTransfer.files[0]
+                        if (file && file.type.startsWith('image/')) {
+                          handleImageUpload(file)
+                        }
+                      }}
+                    >
+                      <input
+                        type="file"
+                        id="edit-image-upload"
+                        accept="image/*"
+                        style={{ display: 'none' }}
+                        onChange={(e) => {
+                          const file = e.target.files[0]
+                          if (file) {
+                            const reader = new FileReader()
+                            reader.onload = (e) => {
+                              setEditingMini({
+                                ...editingMini,
+                                image_path: e.target.result
+                              })
+                            }
+                            reader.readAsDataURL(file)
+                          }
+                        }}
+                      />
+                      {editingMini?.image_path ? (
+                        <img 
+                          src={editingMini.image_path} 
+                          alt="Preview" 
+                          style={{ 
+                            maxHeight: '100%', 
+                            maxWidth: '100%', 
+                            objectFit: 'contain' 
+                          }} 
+                        />
+                      ) : (
+                        <FontAwesomeIcon 
+                          icon={faImage} 
+                          size="2x" 
+                          className={darkMode ? 'text-light' : 'text-muted'} 
+                        />
+                      )}
+                    </div>
+                  </Col>
+                  <Col md={9}>
+                    <Row>
+                      <Col md={6}>
+                        <Form.Group>
+                          <Form.Label>Name <span className="text-danger">*</span></Form.Label>
+                          <Form.Control
+                            type="text"
+                            value={editingMini?.name || ''}
+                            onChange={(e) => setEditingMini({...editingMini, name: e.target.value})}
+                            required
+                            isInvalid={validationErrors.name}
+                          />
+                          {validationErrors.name && (
+                            <Form.Control.Feedback type="invalid">
+                              Name is required
+                            </Form.Control.Feedback>
+                          )}
+                        </Form.Group>
+                      </Col>
+                      <Col md={6}>
+                        <Form.Group>
+                          <Form.Label>Location <span className="text-danger">*</span></Form.Label>
+                          <Form.Control
+                            type="text"
+                            value={editingMini?.location || ''}
+                            onChange={(e) => setEditingMini({...editingMini, location: e.target.value})}
+                            required
+                            isInvalid={validationErrors.location}
+                          />
+                          {validationErrors.location && (
+                            <Form.Control.Feedback type="invalid">
+                              Location is required
+                            </Form.Control.Feedback>
+                          )}
+                        </Form.Group>
+                      </Col>
+                    </Row>
+                    <Row className="mt-3">
+                      <Col>
+                        <Form.Group>
+                          <Form.Label>Description</Form.Label>
+                          <Form.Control
+                            as="textarea"
+                            rows={2}
+                            value={editingMini?.description || ''}
+                            onChange={(e) => setEditingMini({...editingMini, description: e.target.value})}
+                            style={{ minHeight: '38px' }}
+                          />
+                        </Form.Group>
+                      </Col>
+                    </Row>
+                  </Col>
+                </Row>
+
+                <Form.Group>
+                  <Form.Label>Quantity: {editingMini?.quantity}</Form.Label>
+                  <Form.Range
+                    min={1}
+                    max={100}
+                    value={editingMini?.quantity || 1}
+                    onChange={(e) => setEditingMini({...editingMini, quantity: parseInt(e.target.value)})}
+                  />
+                </Form.Group>
+              </Card.Body>
+            </Card>
+
+            {/* Classification Card */}
+            <Card className="mb-3">
+              <Card.Header className="bg-light d-flex align-items-center">
+                <h6 className="mb-0">Classification</h6>
+              </Card.Header>
+              <Card.Body>
+                <Row>
+                  <Col md={4}>
+                    <Form.Group className="mb-3">
+                      <Form.Label>Categories <span className="text-danger">*</span></Form.Label>
+                      <SearchableSelect
+                        items={categories}
+                        value={editingMini?.categories || []}
+                        onChange={(category) => {
+                          if (!editingMini?.categories.includes(category.id.toString())) {
+                            setEditingMini({
+                              ...editingMini,
+                              categories: [...(editingMini?.categories || []), category.id.toString()]
+                            })
+                          }
+                        }}
+                        placeholder="Search categories..."
+                        isInvalid={validationErrors.categories}
+                      />
+                      <div className="mt-2">
+                        {editingMini?.categories?.map(catId => {
+                          const category = categories.find(c => c.id.toString() === catId)
+                          return category ? (
+                            <span
+                              key={category.id}
+                              className="badge bg-primary me-1 mb-1"
+                              style={{ cursor: 'pointer' }}
+                              onClick={() => {
+                                setEditingMini({
+                                  ...editingMini,
+                                  categories: editingMini.categories.filter(id => id !== catId)
+                                })
+                              }}
+                            >
+                              {category.name} ×
+                            </span>
+                          ) : null
+                        })}
+                      </div>
+                    </Form.Group>
+                  </Col>
+                  <Col md={4}>
+                    <Form.Group className="mb-3">
+                      <Form.Label>Types <span className="text-danger">*</span></Form.Label>
+                      <SearchableSelect
+                        items={types.filter(type => 
+                          editingMini?.categories?.includes(type.category_id.toString())
+                        )}
+                        value={editingMini?.types || []}
+                        onChange={(type) => {
+                          if (!editingMini?.types.includes(type.id.toString())) {
+                            setEditingMini({
+                              ...editingMini,
+                              types: [...(editingMini?.types || []), type.id.toString()]
+                            })
+                          }
+                        }}
+                        placeholder="Search types..."
+                        renderOption={(type) => `${type.category_name}: ${type.name}`}
+                        isInvalid={validationErrors.types}
+                      />
+                      <div className="mt-2">
+                        {editingMini?.types?.map(typeId => {
+                          const type = types.find(t => t.id.toString() === typeId)
+                          return type ? (
+                            <span
+                              key={type.id}
+                              className="badge bg-primary me-1 mb-1"
+                              style={{ cursor: 'pointer' }}
+                              onClick={() => {
+                                setEditingMini({
+                                  ...editingMini,
+                                  types: editingMini.types.filter(id => id !== typeId)
+                                })
+                              }}
+                            >
+                              {`${type.category_name}: ${type.name}`} ×
+                            </span>
+                          ) : null
+                        })}
+                      </div>
+                    </Form.Group>
+                  </Col>
+                  <Col md={4}>
+                    <Form.Group className="mb-3">
+                      <Form.Label>Proxy Types</Form.Label>
+                      <SearchableSelect
+                        items={types.filter(type => 
+                          !editingMini?.types?.includes(type.id.toString())
+                        )}
+                        value={editingMini?.proxy_types || []}
+                        onChange={(type) => {
+                          if (!editingMini?.proxy_types?.includes(type.id.toString())) {
+                            setEditingMini({
+                              ...editingMini,
+                              proxy_types: [...(editingMini?.proxy_types || []), type.id.toString()]
+                            })
+                          }
+                        }}
+                        placeholder="Search proxy types..."
+                        renderOption={(type) => `${type.category_name}: ${type.name}`}
+                      />
+                      <div className="mt-2">
+                        {editingMini?.proxy_types?.map(typeId => {
+                          const type = types.find(t => t.id.toString() === typeId)
+                          return type ? (
+                            <span
+                              key={type.id}
+                              className="badge bg-primary me-1 mb-1"
+                              style={{ cursor: 'pointer' }}
+                              onClick={() => {
+                                setEditingMini({
+                                  ...editingMini,
+                                  proxy_types: editingMini.proxy_types.filter(id => id !== typeId)
+                                })
+                              }}
+                            >
+                              {`${type.category_name}: ${type.name}`} ×
+                            </span>
+                          ) : null
+                        })}
+                      </div>
+                    </Form.Group>
+                  </Col>
+                </Row>
+              </Card.Body>
+            </Card>
+
+            {/* Tags and Product Information Card */}
+            <Card className="mb-3">
+              <Card.Header className="bg-light d-flex align-items-center">
+                <h6 className="mb-0">Tags and Product Information</h6>
+              </Card.Header>
+              <Card.Body>
+                <Row>
+                  <Col md={6}>
+                    <Form.Group className="mb-3">
+                      <Form.Label>Tags</Form.Label>
+                      <TagInput
+                        value={editingMini?.tags || []}
+                        onChange={(tags) => setEditingMini({...editingMini, tags})}
+                        existingTags={existingTags}
+                        placeholder="Type tag and press Enter or comma to add..."
+                      />
+                    </Form.Group>
+                  </Col>
+                  <Col md={6}>
+                    <Form.Group className="mb-3">
+                      <Form.Label>Product Set</Form.Label>
+                      <SearchableSelect
+                        items={productSets}
+                        value={editingMini?.product_sets || []}
+                        onChange={(set) => {
+                          setEditingMini({
+                            ...editingMini,
+                            product_sets: [set.id.toString()]
+                          })
+                        }}
+                        placeholder="Search product sets..."
+                        renderOption={(set) => `${set.manufacturer_name} » ${set.product_line_name} » ${set.name}`}
+                      />
+                      <div className="mt-2">
+                        {editingMini?.product_sets?.map(setId => {
+                          const set = productSets.find(s => s.id.toString() === setId)
+                          return set ? (
+                            <span
+                              key={set.id}
+                              className="badge bg-primary me-1 mb-1"
+                              style={{ cursor: 'pointer' }}
+                              onClick={() => {
+                                setEditingMini({
+                                  ...editingMini,
+                                  product_sets: editingMini.product_sets.filter(id => id !== setId)
+                                })
+                              }}
+                            >
+                              {`${set.manufacturer_name} » ${set.product_line_name} » ${set.name}`} ×
+                            </span>
+                          ) : null
+                        })}
+                      </div>
+                    </Form.Group>
+                  </Col>
+                </Row>
+              </Card.Body>
+            </Card>
+          </Form>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={() => setShowEditModal(false)}>
+            Cancel
+          </Button>
+          <Button variant="primary" onClick={handleUpdateMini}>
+            Save Changes
           </Button>
         </Modal.Footer>
       </Modal>

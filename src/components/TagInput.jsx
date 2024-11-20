@@ -32,15 +32,12 @@ const TagInput = ({ value = [], onChange, existingTags = [], placeholder }) => {
     }
   }
 
-  const handleSuggestionClick = (tag) => {
-    if (!value.includes(tag)) {
-      onChange([...value, tag])
-    }
-    setInput('')
+  const handleRemoveTag = (tagToRemove) => {
+    onChange(value.filter(tag => tag !== tagToRemove))
   }
 
   return (
-    <div className="position-relative">
+    <div>
       <Form.Control
         type="text"
         value={input}
@@ -57,14 +54,30 @@ const TagInput = ({ value = [], onChange, existingTags = [], placeholder }) => {
             <div
               key={index}
               className="p-2 cursor-pointer hover-bg-light"
-              onMouseDown={(e) => e.preventDefault()}
-              onClick={() => handleSuggestionClick(tag)}
+              onClick={() => {
+                if (!value.includes(tag)) {
+                  onChange([...value, tag])
+                }
+                setInput('')
+              }}
             >
               {tag}
             </div>
           ))}
         </div>
       )}
+      <div className="mt-2">
+        {value.map((tag, index) => (
+          <span
+            key={index}
+            className="badge bg-primary me-1 mb-1"
+            style={{ cursor: 'pointer' }}
+            onClick={() => handleRemoveTag(tag)}
+          >
+            {tag} ×
+          </span>
+        ))}
+      </div>
     </div>
   )
 }
