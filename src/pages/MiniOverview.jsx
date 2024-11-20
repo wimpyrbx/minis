@@ -68,7 +68,13 @@ const MiniOverview = () => {
   const fetchMinis = async () => {
     try {
       const response = await api.get('/api/minis')
-      setMinis(response.data)
+      const timestamp = Date.now()
+      const minisWithCacheBusting = response.data.map(mini => ({
+        ...mini,
+        image_path: mini.image_path ? `${mini.image_path}?t=${timestamp}` : null,
+        original_image_path: mini.original_image_path ? `${mini.original_image_path}?t=${timestamp}` : null
+      }))
+      setMinis(minisWithCacheBusting)
     } catch (err) {
       console.error('Error fetching minis:', err)
       setError(err.message)
@@ -506,10 +512,19 @@ const MiniOverview = () => {
         return
       }
 
-      await api.put(`/api/minis/${editingMini.id}`, editingMini)
+      const response = await api.put(`/api/minis/${editingMini.id}`, editingMini)
       
-      // Refresh the entire minis list
-      await fetchMinis()
+      // Add timestamp to image URLs to bust cache
+      const updatedMini = {
+        ...response.data,
+        image_path: response.data.image_path ? `${response.data.image_path}?t=${Date.now()}` : null,
+        original_image_path: response.data.original_image_path ? `${response.data.original_image_path}?t=${Date.now()}` : null
+      }
+      
+      // Update the mini in the local state with cache-busting URLs
+      setMinis(prevMinis => prevMinis.map(mini => 
+        mini.id === editingMini.id ? updatedMini : mini
+      ))
 
       setShowEditModal(false)
       setEditingMini(null)
