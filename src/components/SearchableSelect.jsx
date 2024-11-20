@@ -46,14 +46,12 @@ const SearchableSelect = ({
             <div
               key={item.id || index}
               className="p-2 cursor-pointer hover-bg-light"
+              onMouseDown={(e) => e.preventDefault()}
               onClick={() => {
                 onChange(item)
                 setSearch('')
                 setShowDropdown(false)
               }}
-              style={{ cursor: 'pointer' }}
-              onMouseEnter={(e) => e.target.style.backgroundColor = '#f8f9fa'}
-              onMouseLeave={(e) => e.target.style.backgroundColor = 'white'}
             >
               {renderOption(item)}
             </div>

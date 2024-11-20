@@ -1,12 +1,14 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { Container, Table, Form, Button, Card, Modal, Row, Col } from 'react-bootstrap'
-import { faTable, faPlus } from '@fortawesome/free-solid-svg-icons'
+import { faTable, faPlus, faImage } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { api } from '../database/db'
 import SearchableSelect from '../components/SearchableSelect'
 import TagInput from '../components/TagInput'
+import { useTheme } from '../context/ThemeContext'
 
 const MiniOverview = () => {
+  const { darkMode } = useTheme()
   const [showAddModal, setShowAddModal] = useState(false)
   const [categories, setCategories] = useState([])
   const [types, setTypes] = useState([])
@@ -134,15 +136,21 @@ const MiniOverview = () => {
     setNewMini({ ...newMini, tags })
   }
 
-  // Add this function to filter types as user types
+  // Update the handleProxyTypeSearch function
   const handleProxyTypeSearch = (value) => {
     setProxyTypeSearch(value)
     if (value.trim()) {
       const filtered = types
-        .filter(type => 
-          `${type.category_name}: ${type.name}`.toLowerCase()
-            .includes(value.toLowerCase())
-        )
+        .filter(type => {
+          // Exclude types that are already selected as regular types
+          const isRegularType = newMini.types.includes(type.id.toString())
+          // Exclude types that are already selected as proxy types
+          const isProxyType = newMini.proxy_types.includes(type.id.toString())
+          
+          return !isRegularType && !isProxyType && 
+            `${type.category_name}: ${type.name}`.toLowerCase()
+              .includes(value.toLowerCase())
+        })
         .slice(0, 5) // Limit to 5 suggestions
       setFilteredProxyTypes(filtered)
     } else {
@@ -150,9 +158,29 @@ const MiniOverview = () => {
     }
   }
 
-  // Add this function to handle selecting a proxy type
+  // Also update the handleAddType function to remove the type from proxy types if it exists
+  const handleAddType = (type) => {
+    if (!newMini.types.includes(type.id.toString())) {
+      // Remove from proxy types if it exists there
+      const updatedProxyTypes = newMini.proxy_types.filter(id => id !== type.id.toString())
+      const updatedSelectedProxyTypes = selectedProxyTypes.filter(t => t.id !== type.id)
+
+      setNewMini({
+        ...newMini,
+        types: [...newMini.types, type.id.toString()],
+        proxy_types: updatedProxyTypes
+      })
+      setSelectedTypes([...selectedTypes, type])
+      setSelectedProxyTypes(updatedSelectedProxyTypes)
+    }
+    setTypeSearch('')
+    setFilteredTypes([])
+  }
+
+  // And update handleAddProxyType to check if the type is already a regular type
   const handleAddProxyType = (type) => {
-    if (!newMini.proxy_types.includes(type.id.toString())) {
+    if (!newMini.proxy_types.includes(type.id.toString()) && 
+        !newMini.types.includes(type.id.toString())) {
       setNewMini({
         ...newMini,
         proxy_types: [...newMini.proxy_types, type.id.toString()]
@@ -220,18 +248,6 @@ const MiniOverview = () => {
     setFilteredCategories([])
   }
 
-  const handleAddType = (type) => {
-    if (!newMini.types.includes(type.id.toString())) {
-      setNewMini({
-        ...newMini,
-        types: [...newMini.types, type.id.toString()]
-      })
-      setSelectedTypes([...selectedTypes, type])
-    }
-    setTypeSearch('')
-    setFilteredTypes([])
-  }
-
   const handleRemoveCategory = (categoryId) => {
     setNewMini({
       ...newMini,
@@ -255,6 +271,19 @@ const MiniOverview = () => {
       types: newMini.types.filter(id => id !== typeId.toString())
     })
     setSelectedTypes(selectedTypes.filter(type => type.id !== typeId))
+  }
+
+  const handleImageUpload = (file) => {
+    if (!file) return
+
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      setNewMini({
+        ...newMini,
+        image_path: e.target.result // Store base64 image data
+      })
+    }
+    reader.readAsDataURL(file)
   }
 
   if (loading) return <div>Loading...</div>
@@ -306,50 +335,111 @@ const MiniOverview = () => {
           <Form onSubmit={handleAddMini}>
             {/* Basic Information Card */}
             <Card className="mb-3">
+              <Card.Header className="bg-light d-flex align-items-center">
+                <h6 className="mb-0">Basic Information</h6>
+              </Card.Header>
               <Card.Body>
-                <h6 className="mb-3">Basic Information</h6>
                 <Row>
-                  <Col md={6}>
-                    <Form.Group className="mb-3">
-                      <Form.Label>Name</Form.Label>
-                      <Form.Control
-                        type="text"
-                        value={newMini.name}
-                        onChange={(e) => setNewMini({...newMini, name: e.target.value})}
-                        required
+                  <Col md={3}>
+                    <div 
+                      className="image-drop-zone"
+                      style={{
+                        height: '76px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: 'pointer',
+                        position: 'relative'
+                      }}
+                      onClick={() => document.getElementById('image-upload').click()}
+                      onDragOver={(e) => {
+                        e.preventDefault()
+                        e.currentTarget.classList.add('dragging')
+                      }}
+                      onDragLeave={(e) => {
+                        e.preventDefault()
+                        e.currentTarget.classList.remove('dragging')
+                      }}
+                      onDrop={(e) => {
+                        e.preventDefault()
+                        e.currentTarget.classList.remove('dragging')
+                        const file = e.dataTransfer.files[0]
+                        if (file && file.type.startsWith('image/')) {
+                          handleImageUpload(file)
+                        }
+                      }}
+                    >
+                      <input
+                        type="file"
+                        id="image-upload"
+                        accept="image/*"
+                        style={{ display: 'none' }}
+                        onChange={(e) => {
+                          const file = e.target.files[0]
+                          if (file) {
+                            handleImageUpload(file)
+                          }
+                        }}
                       />
-                    </Form.Group>
+                      {newMini.image_path ? (
+                        <img 
+                          src={newMini.image_path} 
+                          alt="Preview" 
+                          style={{ 
+                            maxHeight: '100%', 
+                            maxWidth: '100%', 
+                            objectFit: 'contain' 
+                          }} 
+                        />
+                      ) : (
+                        <FontAwesomeIcon 
+                          icon={faImage} 
+                          size="2x" 
+                          className={darkMode ? 'text-light' : 'text-muted'} 
+                        />
+                      )}
+                    </div>
                   </Col>
-                  <Col md={6}>
-                    <Form.Group className="mb-3">
-                      <Form.Label>Location</Form.Label>
-                      <Form.Control
-                        type="text"
-                        value={newMini.location}
-                        onChange={(e) => setNewMini({...newMini, location: e.target.value})}
-                      />
-                    </Form.Group>
+                  <Col md={9}>
+                    <Row>
+                      <Col md={6}>
+                        <Form.Group>
+                          <Form.Label>Name</Form.Label>
+                          <Form.Control
+                            type="text"
+                            value={newMini.name}
+                            onChange={(e) => setNewMini({...newMini, name: e.target.value})}
+                            required
+                          />
+                        </Form.Group>
+                      </Col>
+                      <Col md={6}>
+                        <Form.Group>
+                          <Form.Label>Location</Form.Label>
+                          <Form.Control
+                            type="text"
+                            value={newMini.location}
+                            onChange={(e) => setNewMini({...newMini, location: e.target.value})}
+                          />
+                        </Form.Group>
+                      </Col>
+                    </Row>
+                    <Row className="mt-3">
+                      <Col>
+                        <Form.Group>
+                          <Form.Label>Description</Form.Label>
+                          <Form.Control
+                            as="textarea"
+                            rows={2}
+                            value={newMini.description}
+                            onChange={(e) => setNewMini({...newMini, description: e.target.value})}
+                            style={{ minHeight: '38px' }}
+                          />
+                        </Form.Group>
+                      </Col>
+                    </Row>
                   </Col>
                 </Row>
-
-                <Form.Group className="mb-3">
-                  <Form.Label>Description</Form.Label>
-                  <Form.Control
-                    as="textarea"
-                    rows={2}
-                    value={newMini.description}
-                    onChange={(e) => setNewMini({...newMini, description: e.target.value})}
-                  />
-                </Form.Group>
-
-                <Form.Group className="mb-3">
-                  <Form.Label>Image Path</Form.Label>
-                  <Form.Control
-                    type="text"
-                    value={newMini.image_path}
-                    onChange={(e) => setNewMini({...newMini, image_path: e.target.value})}
-                  />
-                </Form.Group>
 
                 <Form.Group>
                   <Form.Label>Quantity: {newMini.quantity}</Form.Label>
@@ -365,8 +455,10 @@ const MiniOverview = () => {
 
             {/* Classification Card */}
             <Card className="mb-3">
+              <Card.Header className="bg-light d-flex align-items-center">
+                <h6 className="mb-0">Classification</h6>
+              </Card.Header>
               <Card.Body>
-                <h6 className="mb-3">Classification</h6>
                 <Row>
                   <Col md={4}>
                     <Form.Group className="mb-3">
@@ -384,11 +476,8 @@ const MiniOverview = () => {
                             {filteredCategories.map(category => (
                               <div
                                 key={category.id}
-                                className="p-2 cursor-pointer hover-bg-light"
+                                className="dropdown-item-hover"
                                 onClick={() => handleAddCategory(category)}
-                                style={{ cursor: 'pointer' }}
-                                onMouseEnter={(e) => e.target.style.backgroundColor = '#f8f9fa'}
-                                onMouseLeave={(e) => e.target.style.backgroundColor = 'white'}
                               >
                                 {category.name}
                               </div>
@@ -427,11 +516,8 @@ const MiniOverview = () => {
                             {filteredTypes.map(type => (
                               <div
                                 key={type.id}
-                                className="p-2 cursor-pointer hover-bg-light"
+                                className="dropdown-item-hover"
                                 onClick={() => handleAddType(type)}
-                                style={{ cursor: 'pointer' }}
-                                onMouseEnter={(e) => e.target.style.backgroundColor = '#f8f9fa'}
-                                onMouseLeave={(e) => e.target.style.backgroundColor = 'white'}
                               >
                                 {`${type.category_name}: ${type.name}`}
                               </div>
@@ -470,11 +556,8 @@ const MiniOverview = () => {
                             {filteredProxyTypes.map(type => (
                               <div
                                 key={type.id}
-                                className="p-2 cursor-pointer hover-bg-light"
+                                className="dropdown-item-hover"
                                 onClick={() => handleAddProxyType(type)}
-                                style={{ cursor: 'pointer' }}
-                                onMouseEnter={(e) => e.target.style.backgroundColor = '#f8f9fa'}
-                                onMouseLeave={(e) => e.target.style.backgroundColor = 'white'}
                               >
                                 {`${type.category_name}: ${type.name}`}
                               </div>
@@ -494,9 +577,6 @@ const MiniOverview = () => {
                           </span>
                         ))}
                       </div>
-                      <Form.Text className="text-muted">
-                        Click on a badge to remove it
-                      </Form.Text>
                     </Form.Group>
                   </Col>
                 </Row>
@@ -505,8 +585,10 @@ const MiniOverview = () => {
 
             {/* Product Information Card */}
             <Card className="mb-3">
+              <Card.Header className="bg-light d-flex align-items-center">
+                <h6 className="mb-0">Product Information</h6>
+              </Card.Header>
               <Card.Body>
-                <h6 className="mb-3">Product Information</h6>
                 <Form.Group className="mb-3">
                   <Form.Label>Product Set</Form.Label>
                   <SearchableSelect
@@ -525,8 +607,10 @@ const MiniOverview = () => {
 
             {/* Tags Card */}
             <Card className="mb-3">
+              <Card.Header className="bg-light d-flex align-items-center">
+                <h6 className="mb-0">Tags</h6>
+              </Card.Header>
               <Card.Body>
-                <h6 className="mb-3">Tags</h6>
                 <TagInput
                   value={newMini.tags}
                   onChange={(tags) => setNewMini({...newMini, tags})}

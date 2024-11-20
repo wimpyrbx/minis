@@ -74,10 +74,8 @@ const TagInput = ({ value = [], onChange, existingTags = [], placeholder }) => {
               <div
                 key={index}
                 className="p-2 cursor-pointer hover-bg-light"
+                onMouseDown={(e) => e.preventDefault()}
                 onClick={() => handleSuggestionClick(tag)}
-                style={{ cursor: 'pointer' }}
-                onMouseEnter={(e) => e.target.style.backgroundColor = '#f8f9fa'}
-                onMouseLeave={(e) => e.target.style.backgroundColor = 'white'}
               >
                 {tag}
               </div>

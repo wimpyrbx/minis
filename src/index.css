@@ -3,13 +3,31 @@
   line-height: 1.4;
   font-weight: 400;
   font-size: 14px;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+[data-bs-theme="light"] {
   background-color: #f5f6f8;
+  color: #212529;
+}
+
+[data-bs-theme="dark"] {
+  background-color: #1a1d21;
+  color: #e9ecef;
 }
 
 body {
   margin: 0;
   min-height: 100vh;
   display: block;
+  transition: background-color 0.3s ease;
+  overflow-x: hidden;
+}
+
+.d-flex {
+  display: flex;
+  width: 100%;
+  overflow: hidden;
 }
 
 .sidebar {
@@ -17,12 +35,49 @@ body {
   background-color: #2b2f36;
   color: white;
   width: 220px;
+  flex-shrink: 0;
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 1030;
+  display: flex;
+  flex-direction: column;
+}
+
+.flex-grow-1 {
+  margin-left: 220px;
+  width: calc(100% - 220px);
+  min-height: 100vh;
+  background-color: inherit;
+}
+
+.content {
+  padding: 1.25rem;
+  width: 100%;
+  transition: background-color 0.3s ease;
+  min-height: 100vh;
+  background-color: inherit;
+}
+
+.theme-switch-container {
+  margin-top: auto;
+  padding: 1rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+[data-bs-theme="light"] .content {
+  background-color: #f5f6f8;
+}
+
+[data-bs-theme="dark"] .content {
+  background-color: #1a1d21;
 }
 
 .nav-link {
   color: #8b8f96 !important;
   padding: 0.5rem 0.75rem !important;
   font-size: 0.85rem;
+  transition: color 0.2s ease, background-color 0.2s ease;
 }
 
 .nav-link:hover {
@@ -33,11 +88,6 @@ body {
 .nav-link.active {
   color: #ffffff !important;
   background-color: #363b44;
-}
-
-.content {
-  padding: 1.25rem;
-  background-color: #f5f6f8;
 }
 
 .search-box {
@@ -87,4 +137,24 @@ h5 {
 
 small {
   font-size: 0.8rem;
+}
+
+/* Smooth transitions for theme changes */
+.card,
+.table,
+.form-control,
+.form-select,
+.modal-content,
+.btn,
+pre {
+  transition: all 0.3s ease;
+}
+
+/* Ensure hover-bg-light behaves correctly in dark mode */
+.hover-bg-light:hover {
+  background-color: #f8f9fa; /* Light mode hover background */
+}
+
+[data-bs-theme="dark"] .hover-bg-light:hover {
+  background-color: #343a40; /* Dark mode hover background */
 }
