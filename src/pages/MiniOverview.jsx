@@ -12,10 +12,10 @@ const MiniOverview = () => {
   const [showAddModal, setShowAddModal] = useState(false)
   const [categories, setCategories] = useState([])
   const [types, setTypes] = useState([])
-  const [productSets, setProductSets] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [existingTags, setExistingTags] = useState([])
+  const [productSets, setProductSets] = useState([])
 
   // Form state for new mini
   const [newMini, setNewMini] = useState({
@@ -27,8 +27,8 @@ const MiniOverview = () => {
     categories: [], // Array of category IDs
     types: [], // Array of type IDs
     proxy_types: [], // Array of type IDs for proxy uses
-    product_sets: [], // Array of set IDs
-    tags: [] // Array of tag names (will be created if they don't exist)
+    tags: [], // Array of tag names (will be created if they don't exist)
+    product_sets: [] // Ensure this is initialized as an array
   })
 
   // Search and filter states
@@ -38,6 +38,8 @@ const MiniOverview = () => {
   const [filteredCategories, setFilteredCategories] = useState([])
   const [filteredTypes, setFilteredTypes] = useState([])
   const [filteredProxyTypes, setFilteredProxyTypes] = useState([])
+  const [productSetSearch, setProductSetSearch] = useState('')
+  const [filteredProductSets, setFilteredProductSets] = useState([])
   
   // Selected items states
   const [selectedCategories, setSelectedCategories] = useState([])
@@ -50,16 +52,20 @@ const MiniOverview = () => {
 
   const fetchData = async () => {
     try {
-      const [categoriesRes, typesRes, setsRes, tagsRes] = await Promise.all([
+      const [categoriesRes, typesRes, tagsRes, productSetsRes] = await Promise.all([
         api.get('/api/categories'),
         api.get('/api/types'),
-        api.get('/api/product-sets'),
-        api.get('/api/tags')
+        api.get('/api/tags'),
+        api.get('/api/product-sets')
       ])
+      console.log('Categories:', categoriesRes.data)
+      console.log('Types:', typesRes.data)
+      console.log('Tags:', tagsRes.data)
+      console.log('Product Sets:', productSetsRes.data)
       setCategories(categoriesRes.data)
       setTypes(typesRes.data)
-      setProductSets(setsRes.data)
       setExistingTags(tagsRes.data.map(tag => tag.name))
+      setProductSets(productSetsRes.data || [])
     } catch (err) {
       setError(err.message)
     } finally {
@@ -81,8 +87,8 @@ const MiniOverview = () => {
         categories: [],
         types: [],
         proxy_types: [],
-        product_sets: [],
-        tags: []
+        tags: [],
+        product_sets: []
       })
       fetchData()
     } catch (err) {
@@ -286,7 +292,41 @@ const MiniOverview = () => {
     reader.readAsDataURL(file)
   }
 
+  const handleProductSetSearch = (value) => {
+    setProductSetSearch(value)
+    if (value.trim()) {
+      const filtered = productSets
+        .filter(set => 
+          `${set.manufacturer_name}: ${set.product_line_name}: ${set.name}`.toLowerCase()
+            .includes(value.toLowerCase())
+        )
+        .slice(0, 5) // Limit to 5 suggestions
+      setFilteredProductSets(filtered)
+    } else {
+      setFilteredProductSets([])
+    }
+  }
+
+  const handleAddProductSet = (productSet) => {
+    if (!newMini.product_sets.includes(productSet.id.toString())) {
+      setNewMini({
+        ...newMini,
+        product_sets: [...newMini.product_sets, productSet.id.toString()]
+      })
+    }
+    setProductSetSearch('')
+    setFilteredProductSets([])
+  }
+
+  const handleRemoveProductSet = (setId) => {
+    setNewMini({
+      ...newMini,
+      product_sets: newMini.product_sets.filter(id => id !== setId.toString())
+    })
+  }
+
   if (loading) return <div>Loading...</div>
+  if (error) return <div>Error: {error}</div>
 
   return (
     <Container fluid className="content">
@@ -583,28 +623,6 @@ const MiniOverview = () => {
               </Card.Body>
             </Card>
 
-            {/* Product Information Card */}
-            <Card className="mb-3">
-              <Card.Header className="bg-light d-flex align-items-center">
-                <h6 className="mb-0">Product Information</h6>
-              </Card.Header>
-              <Card.Body>
-                <Form.Group className="mb-3">
-                  <Form.Label>Product Set</Form.Label>
-                  <SearchableSelect
-                    items={productSets}
-                    value={newMini.product_set}
-                    onChange={(set) => setNewMini({...newMini, product_set: set})}
-                    placeholder="Search for product sets..."
-                    searchKeys={['name', 'product_line_name', 'manufacturer_name']}
-                    renderOption={(set) => 
-                      `${set.manufacturer_name} > ${set.product_line_name} > ${set.name}`
-                    }
-                  />
-                </Form.Group>
-              </Card.Body>
-            </Card>
-
             {/* Tags Card */}
             <Card className="mb-3">
               <Card.Header className="bg-light d-flex align-items-center">
@@ -617,6 +635,55 @@ const MiniOverview = () => {
                   existingTags={existingTags}
                   placeholder="Type tag and press Enter or comma to add..."
                 />
+              </Card.Body>
+            </Card>
+
+            {/* Product Sets Card */}
+            <Card className="mb-3">
+              <Card.Header className="bg-light d-flex align-items-center">
+                <h6 className="mb-0">Product Sets</h6>
+              </Card.Header>
+              <Card.Body>
+                <Form.Group className="mb-3">
+                  <Form.Label>Product Sets</Form.Label>
+                  <div className="position-relative">
+                    <Form.Control
+                      type="text"
+                      value={productSetSearch}
+                      onChange={(e) => handleProductSetSearch(e.target.value)}
+                      placeholder="Type to search for product sets..."
+                    />
+                    {filteredProductSets.length > 0 && (
+                      <div className="position-absolute w-100 bg-white border rounded shadow-sm" 
+                           style={{ zIndex: 1000, maxHeight: '200px', overflowY: 'auto' }}>
+                        {filteredProductSets.map(set => (
+                          <div
+                            key={set.id}
+                            className="dropdown-item-hover"
+                            onClick={() => handleAddProductSet(set)}
+                          >
+                            {`${set.manufacturer_name} » ${set.product_line_name} » ${set.name}`}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <div className="mt-2">
+                    {Array.isArray(newMini.product_sets) && newMini.product_sets.map(setId => {
+                      const set = productSets?.find(s => s.id.toString() === setId);
+                      return set ? (
+                        <span
+                          key={set.id}
+                          className="badge bg-primary"
+                          style={{ cursor: 'pointer' }}
+                          onClick={() => handleRemoveProductSet(set.id)}
+                        >
+                          {`${set.manufacturer_name} » ${set.product_line_name} » ${set.name}`} ×
+                        </span>
+                      ) : null;
+                    })}
+                  </div>
+                </Form.Group>
               </Card.Body>
             </Card>
           </Form>
