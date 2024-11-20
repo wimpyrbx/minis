@@ -88,11 +88,9 @@ async function initDatabase() {
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           name TEXT NOT NULL,
           description TEXT,
-          location TEXT,
+          location TEXT NOT NULL,
           image_path TEXT,
           quantity INTEGER DEFAULT 1 CHECK (quantity >= 0),
-          painted BOOLEAN DEFAULT 0,
-          assembled BOOLEAN DEFAULT 0,
           created_at TEXT DEFAULT (datetime('now')),
           updated_at TEXT DEFAULT (datetime('now'))
       );`,
@@ -583,93 +581,133 @@ app.delete('/api/product-sets/:id', async (req, res) => {
   }
 })
 
-// Create new mini with all relationships
+// POST endpoint to create a new mini
 app.post('/api/minis', async (req, res) => {
-  const {
-    name, description, location, image_path,
-    quantity, painted, assembled,
-    categories, types, proxy_types, product_sets, tags
-  } = req.body
-
   try {
     // Start a transaction
+    console.log('Starting transaction')
     await db.run('BEGIN TRANSACTION')
 
-    try {
-      // Insert the mini
-      const miniResult = await db.run(`
-        INSERT INTO minis (
-          name, description, location, image_path,
-          quantity, painted, assembled
-        ) VALUES (?, ?, ?, ?, ?, ?, ?)
-      `, [name, description, location, image_path, quantity, painted, assembled])
+    const {
+      name, description, location, image_path,
+      quantity, categories, types, proxy_types, 
+      tags, product_sets
+    } = req.body
 
-      const miniId = miniResult.lastID
+    console.log('Received data:', {
+      name, description, location, image_path,
+      quantity, categories, types, proxy_types, 
+      tags, product_sets
+    })
 
-      // Insert categories
+    // Validate required fields
+    if (!name?.trim() || !location?.trim()) {
+      throw new Error('Name and location are required fields')
+    }
+
+    // Insert the main mini record
+    console.log('Inserting main mini record')
+    const result = await db.run(
+      `INSERT INTO minis (
+        name, description, location, image_path,
+        quantity, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, datetime('now'), datetime('now'))`,
+      [
+        name.trim(),
+        description?.trim() || null,
+        location.trim(),
+        image_path?.trim() || null,
+        quantity || 1
+      ]
+    )
+
+    const miniId = result.lastID
+    console.log('Created mini with ID:', miniId)
+
+    // Insert categories
+    if (categories?.length > 0) {
+      console.log('Inserting categories:', categories)
       for (const categoryId of categories) {
         await db.run(
           'INSERT INTO mini_to_categories (mini_id, category_id) VALUES (?, ?)',
           [miniId, categoryId]
         )
       }
+    }
 
-      // Insert types
+    // Insert types
+    if (types?.length > 0) {
+      console.log('Inserting types:', types)
       for (const typeId of types) {
         await db.run(
           'INSERT INTO mini_to_types (mini_id, type_id) VALUES (?, ?)',
           [miniId, typeId]
         )
       }
+    }
 
-      // Insert proxy types
+    // Insert proxy types
+    if (proxy_types?.length > 0) {
+      console.log('Inserting proxy types:', proxy_types)
       for (const typeId of proxy_types) {
         await db.run(
           'INSERT INTO mini_to_proxy_types (mini_id, type_id) VALUES (?, ?)',
           [miniId, typeId]
         )
       }
+    }
 
-      // Insert product sets
-      for (const setId of product_sets) {
-        await db.run(
-          'INSERT INTO mini_to_product_sets (mini_id, set_id) VALUES (?, ?)',
-          [miniId, setId]
-        )
-      }
-
-      // Insert tags (create if they don't exist)
+    // Insert tags
+    if (tags?.length > 0) {
+      console.log('Processing tags:', tags)
       for (const tagName of tags) {
         // Try to get existing tag
+        console.log('Looking up tag:', tagName)
         let tagResult = await db.get('SELECT id FROM tags WHERE name = ?', tagName)
         
         // Create tag if it doesn't exist
         if (!tagResult) {
+          console.log('Creating new tag:', tagName)
           const newTag = await db.run('INSERT INTO tags (name) VALUES (?)', tagName)
           tagResult = { id: newTag.lastID }
         }
 
+        console.log('Linking tag to mini:', { tagId: tagResult.id, miniId })
         // Link tag to mini
         await db.run(
           'INSERT INTO mini_to_tags (mini_id, tag_id) VALUES (?, ?)',
           [miniId, tagResult.id]
         )
       }
-
-      // Commit the transaction
-      await db.run('COMMIT')
-
-      // Get the complete mini data
-      const mini = await db.get('SELECT * FROM minis WHERE id = ?', miniId)
-      res.status(201).json(mini)
-
-    } catch (error) {
-      // Rollback on error
-      await db.run('ROLLBACK')
-      throw error
     }
+
+    // Insert product sets
+    if (product_sets?.length > 0) {
+      console.log('Inserting product sets:', product_sets)
+      for (const setId of product_sets) {
+        await db.run(
+          'INSERT INTO mini_to_product_sets (mini_id, set_id) VALUES (?, ?)',
+          [miniId, setId]
+        )
+      }
+    }
+
+    // Commit the transaction
+    console.log('Committing transaction')
+    await db.run('COMMIT')
+
+    // Get the complete mini data
+    console.log('Fetching complete mini data')
+    const mini = await db.get('SELECT * FROM minis WHERE id = ?', miniId)
+    console.log('Returning mini data:', mini)
+    res.status(201).json(mini)
+
   } catch (error) {
-    res.status(500).json({ error: error.message })
+    // Rollback on error
+    console.error('Error during mini creation, rolling back:', error)
+    console.error('Stack trace:', error.stack)
+    await db.run('ROLLBACK')
+    throw error
   }
 })
 

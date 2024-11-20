@@ -106,7 +106,11 @@ const MiniOverview = () => {
         description: newMini.description.trim(),
       }
       
-      await api.post('/api/minis', miniToSave)
+      console.log('Attempting to save mini with data:', JSON.stringify(miniToSave, null, 2))
+      
+      const response = await api.post('/api/minis', miniToSave)
+      console.log('Server response:', response)
+      
       setShowAddModal(false)
       setNewMini({
         name: '',
@@ -129,7 +133,13 @@ const MiniOverview = () => {
       })
       fetchData()
     } catch (err) {
-      setError(err.message)
+      console.error('Error details:', {
+        message: err.message,
+        response: err.response?.data,
+        status: err.response?.status,
+        fullError: err
+      })
+      setError(err.response?.data?.error || err.message)
     }
   }
 
