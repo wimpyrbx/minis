@@ -46,6 +46,14 @@ const MiniOverview = () => {
   const [selectedTypes, setSelectedTypes] = useState([])
   const [selectedProxyTypes, setSelectedProxyTypes] = useState([])
 
+  // Add new state for validation
+  const [validationErrors, setValidationErrors] = useState({
+    name: false,
+    location: false,
+    categories: false,
+    types: false
+  })
+
   useEffect(() => {
     fetchData()
   }, [])
@@ -58,10 +66,6 @@ const MiniOverview = () => {
         api.get('/api/tags'),
         api.get('/api/product-sets')
       ])
-      console.log('Categories:', categoriesRes.data)
-      console.log('Types:', typesRes.data)
-      console.log('Tags:', tagsRes.data)
-      console.log('Product Sets:', productSetsRes.data)
       setCategories(categoriesRes.data)
       setTypes(typesRes.data)
       setExistingTags(tagsRes.data.map(tag => tag.name))
@@ -75,8 +79,34 @@ const MiniOverview = () => {
 
   const handleAddMini = async (e) => {
     e.preventDefault()
+    
+    // Reset previous validation errors
+    setError(null)
+    
+    // Check all validations
+    const newValidationErrors = {
+      name: !newMini.name.trim(),
+      location: !newMini.location.trim(),
+      categories: newMini.categories.length === 0,
+      types: newMini.types.length === 0
+    }
+    
+    setValidationErrors(newValidationErrors)
+    
+    // If any validation fails, stop here
+    if (Object.values(newValidationErrors).some(Boolean)) {
+      return
+    }
+    
     try {
-      await api.post('/api/minis', newMini)
+      const miniToSave = {
+        ...newMini,
+        name: newMini.name.trim(),
+        location: newMini.location.trim(),
+        description: newMini.description.trim(),
+      }
+      
+      await api.post('/api/minis', miniToSave)
       setShowAddModal(false)
       setNewMini({
         name: '',
@@ -89,6 +119,13 @@ const MiniOverview = () => {
         proxy_types: [],
         tags: [],
         product_sets: []
+      })
+      // Reset validation errors
+      setValidationErrors({
+        name: false,
+        location: false,
+        categories: false,
+        types: false
       })
       fetchData()
     } catch (err) {
@@ -308,10 +345,10 @@ const MiniOverview = () => {
   }
 
   const handleAddProductSet = (productSet) => {
-    if (!newMini.product_sets.includes(productSet.id.toString())) {
+    if (newMini.product_sets.length === 0) {
       setNewMini({
         ...newMini,
-        product_sets: [...newMini.product_sets, productSet.id.toString()]
+        product_sets: [productSet.id.toString()]
       })
     }
     setProductSetSearch('')
@@ -444,23 +481,36 @@ const MiniOverview = () => {
                     <Row>
                       <Col md={6}>
                         <Form.Group>
-                          <Form.Label>Name</Form.Label>
+                          <Form.Label>Name <span className="text-danger">*</span></Form.Label>
                           <Form.Control
                             type="text"
                             value={newMini.name}
                             onChange={(e) => setNewMini({...newMini, name: e.target.value})}
                             required
+                            isInvalid={validationErrors.name}
                           />
+                          {validationErrors.name && (
+                            <Form.Control.Feedback type="invalid">
+                              Name is required
+                            </Form.Control.Feedback>
+                          )}
                         </Form.Group>
                       </Col>
                       <Col md={6}>
                         <Form.Group>
-                          <Form.Label>Location</Form.Label>
+                          <Form.Label>Location <span className="text-danger">*</span></Form.Label>
                           <Form.Control
                             type="text"
                             value={newMini.location}
                             onChange={(e) => setNewMini({...newMini, location: e.target.value})}
+                            required
+                            isInvalid={validationErrors.location}
                           />
+                          {validationErrors.location && (
+                            <Form.Control.Feedback type="invalid">
+                              Location is required
+                            </Form.Control.Feedback>
+                          )}
                         </Form.Group>
                       </Col>
                     </Row>
@@ -502,13 +552,14 @@ const MiniOverview = () => {
                 <Row>
                   <Col md={4}>
                     <Form.Group className="mb-3">
-                      <Form.Label>Categories</Form.Label>
+                      <Form.Label>Categories <span className="text-danger">*</span></Form.Label>
                       <div className="position-relative">
                         <Form.Control
                           type="text"
                           value={categorySearch}
                           onChange={(e) => handleCategorySearch(e.target.value)}
                           placeholder="Type to search for categories..."
+                          isInvalid={validationErrors.categories}
                         />
                         {filteredCategories.length > 0 && (
                           <div className="position-absolute w-100 bg-white border rounded shadow-sm" 
@@ -522,6 +573,11 @@ const MiniOverview = () => {
                                 {category.name}
                               </div>
                             ))}
+                          </div>
+                        )}
+                        {validationErrors.categories && (
+                          <div className="text-danger small mt-1">
+                            At least one category is required
                           </div>
                         )}
                       </div>
@@ -541,7 +597,7 @@ const MiniOverview = () => {
                   </Col>
                   <Col md={4}>
                     <Form.Group className="mb-3">
-                      <Form.Label>Types</Form.Label>
+                      <Form.Label>Types <span className="text-danger">*</span></Form.Label>
                       <div className="position-relative">
                         <Form.Control
                           type="text"
@@ -549,6 +605,7 @@ const MiniOverview = () => {
                           onChange={(e) => handleTypeSearch(e.target.value)}
                           placeholder="Type to search for types..."
                           disabled={selectedCategories.length === 0}
+                          isInvalid={validationErrors.types}
                         />
                         {filteredTypes.length > 0 && (
                           <div className="position-absolute w-100 bg-white border rounded shadow-sm" 
@@ -562,6 +619,11 @@ const MiniOverview = () => {
                                 {`${type.category_name}: ${type.name}`}
                               </div>
                             ))}
+                          </div>
+                        )}
+                        {validationErrors.types && (
+                          <div className="text-danger small mt-1">
+                            At least one type is required
                           </div>
                         )}
                       </div>
@@ -623,67 +685,81 @@ const MiniOverview = () => {
               </Card.Body>
             </Card>
 
-            {/* Tags Card */}
+            {/* Tags and Product Information Card */}
             <Card className="mb-3">
               <Card.Header className="bg-light d-flex align-items-center">
-                <h6 className="mb-0">Tags</h6>
+                <h6 className="mb-0">Tags and Product Information</h6>
               </Card.Header>
               <Card.Body>
-                <TagInput
-                  value={newMini.tags}
-                  onChange={(tags) => setNewMini({...newMini, tags})}
-                  existingTags={existingTags}
-                  placeholder="Type tag and press Enter or comma to add..."
-                />
-              </Card.Body>
-            </Card>
-
-            {/* Product Sets Card */}
-            <Card className="mb-3">
-              <Card.Header className="bg-light d-flex align-items-center">
-                <h6 className="mb-0">Product Sets</h6>
-              </Card.Header>
-              <Card.Body>
-                <Form.Group className="mb-3">
-                  <Form.Label>Product Sets</Form.Label>
-                  <div className="position-relative">
-                    <Form.Control
-                      type="text"
-                      value={productSetSearch}
-                      onChange={(e) => handleProductSetSearch(e.target.value)}
-                      placeholder="Type to search for product sets..."
-                    />
-                    {filteredProductSets.length > 0 && (
-                      <div className="position-absolute w-100 bg-white border rounded shadow-sm" 
-                           style={{ zIndex: 1000, maxHeight: '200px', overflowY: 'auto' }}>
-                        {filteredProductSets.map(set => (
-                          <div
-                            key={set.id}
-                            className="dropdown-item-hover"
-                            onClick={() => handleAddProductSet(set)}
+                <Row>
+                  <Col md={6}>
+                    <Form.Group className="mb-3">
+                      <Form.Label>Tags</Form.Label>
+                      <div className="position-relative">
+                        <TagInput
+                          value={newMini.tags}
+                          onChange={(tags) => setNewMini({...newMini, tags})}
+                          existingTags={existingTags}
+                          placeholder="Type tag and press Enter or comma to add..."
+                        />
+                      </div>
+                      <div className="mt-2">
+                        {newMini.tags.map((tag, index) => (
+                          <span
+                            key={index}
+                            className="badge bg-primary me-1 mb-1"
+                            style={{ cursor: 'pointer' }}
+                            onClick={() => handleRemoveTag(tag)}
                           >
-                            {`${set.manufacturer_name} » ${set.product_line_name} » ${set.name}`}
-                          </div>
+                            {tag} ×
+                          </span>
                         ))}
                       </div>
-                    )}
-                  </div>
-                  <div className="mt-2">
-                    {Array.isArray(newMini.product_sets) && newMini.product_sets.map(setId => {
-                      const set = productSets?.find(s => s.id.toString() === setId);
-                      return set ? (
-                        <span
-                          key={set.id}
-                          className="badge bg-primary"
-                          style={{ cursor: 'pointer' }}
-                          onClick={() => handleRemoveProductSet(set.id)}
-                        >
-                          {`${set.manufacturer_name} » ${set.product_line_name} » ${set.name}`} ×
-                        </span>
-                      ) : null;
-                    })}
-                  </div>
-                </Form.Group>
+                    </Form.Group>
+                  </Col>
+                  <Col md={6}>
+                    <Form.Group className="mb-3">
+                      <Form.Label>Product Set</Form.Label>
+                      <div className="position-relative">
+                        <Form.Control
+                          type="text"
+                          value={productSetSearch}
+                          onChange={(e) => handleProductSetSearch(e.target.value)}
+                          placeholder="Type to search for product sets..."
+                        />
+                        {filteredProductSets.length > 0 && (
+                          <div className="position-absolute w-100 bg-white border rounded shadow-sm" 
+                               style={{ zIndex: 1000, maxHeight: '200px', overflowY: 'auto' }}>
+                            {filteredProductSets.map(set => (
+                              <div
+                                key={set.id}
+                                className="dropdown-item-hover"
+                                onClick={() => handleAddProductSet(set)}
+                              >
+                                {`${set.manufacturer_name} » ${set.product_line_name} » ${set.name}`}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                      <div className="mt-2">
+                        {Array.isArray(newMini.product_sets) && newMini.product_sets.map(setId => {
+                          const set = productSets?.find(s => s.id.toString() === setId);
+                          return set ? (
+                            <span
+                              key={set.id}
+                              className="badge bg-primary"
+                              style={{ cursor: 'pointer' }}
+                              onClick={() => handleRemoveProductSet(set.id)}
+                            >
+                              {`${set.manufacturer_name} » ${set.product_line_name} » ${set.name}`} ×
+                            </span>
+                          ) : null;
+                        })}
+                      </div>
+                    </Form.Group>
+                  </Col>
+                </Row>
               </Card.Body>
             </Card>
           </Form>
