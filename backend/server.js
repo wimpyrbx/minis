@@ -3,11 +3,15 @@ const cors = require('cors')
 const sqlite3 = require('sqlite3')
 const { open } = require('sqlite')
 const path = require('path')
-const fs = require('fs')
+const fs = require('fs/promises')
+const sharp = require('sharp')
+const { mkdirp } = require('mkdirp')
+const fsSync = require('fs')
 
 const app = express()
 app.use(cors())
-app.use(express.json())
+app.use(express.json({ limit: '50mb' }))
+app.use(express.urlencoded({ limit: '50mb', extended: true }))
 
 let db = null
 
@@ -18,8 +22,8 @@ async function initDatabase() {
     
     // Create database directory if it doesn't exist
     const dbDir = path.dirname(dbPath)
-    if (!fs.existsSync(dbDir)) {
-      fs.mkdirSync(dbDir, { recursive: true })
+    if (!fsSync.existsSync(dbDir)) {
+      await fs.mkdir(dbDir, { recursive: true })
     }
 
     db = await open({
@@ -90,6 +94,7 @@ async function initDatabase() {
           description TEXT,
           location TEXT NOT NULL,
           image_path TEXT,
+          original_image_path TEXT,
           quantity INTEGER DEFAULT 1 CHECK (quantity >= 0),
           created_at TEXT DEFAULT (datetime('now')),
           updated_at TEXT DEFAULT (datetime('now'))
@@ -688,48 +693,103 @@ app.delete('/api/product-sets/:id', async (req, res) => {
   }
 })
 
-// POST endpoint to create a new mini
+// Update the processAndSaveImage function
+async function processAndSaveImage(imageData, miniId) {
+  // Remove data:image/xyz;base64, prefix
+  const base64Data = imageData.replace(/^data:image\/\w+;base64,/, '')
+  const imageBuffer = Buffer.from(base64Data, 'base64')
+
+  // Create directory paths based on ID
+  const idStr = miniId.toString()
+  const dir1 = idStr.length > 2 ? idStr.slice(0, 1) : '0'
+  const dir2 = idStr.length > 1 ? idStr.slice(1, 2) : '0'
+  
+  // Paths for thumbnails - use path.join with parent directory
+  const thumbDirPath = path.join(__dirname, '..', 'public', 'images', 'minis', dir1, dir2)
+  await fs.mkdir(thumbDirPath, { recursive: true })
+  const thumbnailPath = path.join(thumbDirPath, `${miniId}.webp`)
+  const publicThumbPath = `/images/minis/${dir1}/${dir2}/${miniId}.webp`
+
+  // Paths for originals - use path.join with parent directory
+  const originalDirPath = path.join(__dirname, '..', 'public', 'images', 'minis', 'originals', dir1, dir2)
+  await fs.mkdir(originalDirPath, { recursive: true })
+  const originalPath = path.join(originalDirPath, `${miniId}.webp`)
+  const publicOriginalPath = `/images/minis/originals/${dir1}/${dir2}/${miniId}.webp`
+
+  // Process and save thumbnail
+  await sharp(imageBuffer)
+    .resize({ height: 50, fit: 'contain', background: { r: 255, g: 255, b: 255, alpha: 0 } })
+    .webp({ quality: 80 })
+    .toFile(thumbnailPath)
+
+  // Process and save original (convert to webp but maintain original size)
+  await sharp(imageBuffer)
+    .webp({ quality: 90 })
+    .toFile(originalPath)
+
+  return {
+    thumbnail: publicThumbPath,
+    original: publicOriginalPath
+  }
+}
+
+// Update the deleteImages function
+async function deleteImages(miniId) {
+  try {
+    const idStr = miniId.toString()
+    const dir1 = idStr.length > 2 ? idStr.slice(0, 1) : '0'
+    const dir2 = idStr.length > 1 ? idStr.slice(1, 2) : '0'
+
+    // Paths for both thumbnail and original - use path.join with parent directory
+    const thumbnailPath = path.join(__dirname, '..', 'public', 'images', 'minis', dir1, dir2, `${miniId}.webp`)
+    const originalPath = path.join(__dirname, '..', 'public', 'images', 'minis', 'originals', dir1, dir2, `${miniId}.webp`)
+
+    // Delete both files if they exist
+    await Promise.all([
+      fs.unlink(thumbnailPath).catch(() => {}),  // Ignore error if file doesn't exist
+      fs.unlink(originalPath).catch(() => {})
+    ])
+  } catch (error) {
+    console.error(`Error deleting images for mini ${miniId}:`, error)
+  }
+}
+
+// Modify the POST endpoint for minis
 app.post('/api/minis', async (req, res) => {
   try {
-    // Start a transaction
-    console.log('Starting transaction')
     await db.run('BEGIN TRANSACTION')
-
+    
     const {
       name, description, location, image_path,
       quantity, categories, types, proxy_types, 
       tags, product_sets
     } = req.body
 
-    console.log('Received data:', {
-      name, description, location, image_path,
-      quantity, categories, types, proxy_types, 
-      tags, product_sets
-    })
-
-    // Validate required fields
-    if (!name?.trim() || !location?.trim()) {
-      throw new Error('Name and location are required fields')
-    }
-
-    // Insert the main mini record
-    console.log('Inserting main mini record')
+    // Insert the main mini record first to get the ID
     const result = await db.run(
       `INSERT INTO minis (
-        name, description, location, image_path,
+        name, description, location,
         quantity, created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, datetime('now'), datetime('now'))`,
+      ) VALUES (?, ?, ?, ?, datetime('now'), datetime('now'))`,
       [
         name.trim(),
         description?.trim() || null,
         location.trim(),
-        image_path?.trim() || null,
         quantity || 1
       ]
     )
 
     const miniId = result.lastID
-    console.log('Created mini with ID:', miniId)
+
+    // Process image if provided
+    if (image_path) {
+      const imagePaths = await processAndSaveImage(image_path, miniId)
+      // Update the mini record with both image paths
+      await db.run(
+        'UPDATE minis SET image_path = ?, original_image_path = ? WHERE id = ?',
+        [imagePaths.thumbnail, imagePaths.original, miniId]
+      )
+    }
 
     // Insert categories
     if (categories?.length > 0) {
@@ -889,18 +949,23 @@ app.get('/api/minis', async (req, res) => {
 
 app.delete('/api/minis/:id', async (req, res) => {
   try {
-    await db.run('DELETE FROM minis WHERE id = ?', req.params.id)
+    const miniId = req.params.id
+    
+    // Delete the images first
+    await deleteImages(miniId)
+    
+    // Then delete the database record
+    await db.run('DELETE FROM minis WHERE id = ?', miniId)
+    
     res.status(204).send()
   } catch (error) {
     res.status(500).json({ error: error.message })
   }
 })
 
-// Add PUT endpoint to update a mini
+// Modify the PUT endpoint for minis
 app.put('/api/minis/:id', async (req, res) => {
   try {
-    // Start a transaction
-    console.log('Starting transaction for update')
     await db.run('BEGIN TRANSACTION')
 
     const miniId = req.params.id
@@ -910,29 +975,28 @@ app.put('/api/minis/:id', async (req, res) => {
       tags, product_sets
     } = req.body
 
-    console.log('Updating mini data:', {
-      name, description, location, image_path,
-      quantity, categories, types, proxy_types, 
-      tags, product_sets
-    })
-
-    // Validate required fields
-    if (!name?.trim() || !location?.trim()) {
-      throw new Error('Name and location are required fields')
+    // Process new image if provided
+    let imagePaths = null
+    if (image_path && image_path.startsWith('data:image')) {
+      // Delete old images first
+      await deleteImages(miniId)
+      imagePaths = await processAndSaveImage(image_path, miniId)
     }
 
     // Update the main mini record
-    console.log('Updating main mini record')
     await db.run(
       `UPDATE minis SET
         name = ?, description = ?, location = ?, 
-        image_path = ?, quantity = ?, updated_at = datetime('now')
+        image_path = COALESCE(?, image_path),
+        original_image_path = COALESCE(?, original_image_path),
+        quantity = ?, updated_at = datetime('now')
       WHERE id = ?`,
       [
         name.trim(),
         description?.trim() || null,
         location.trim(),
-        image_path?.trim() || null,
+        imagePaths?.thumbnail,
+        imagePaths?.original,
         quantity || 1,
         miniId
       ]
@@ -1101,3 +1165,6 @@ app.get('/api/minis/:id/relationships', async (req, res) => {
     res.status(500).json({ error: error.message })
   }
 }) 
+
+// Update the static file serving
+app.use('/images', express.static(path.join(__dirname, '..', 'public', 'images'))) 

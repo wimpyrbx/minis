@@ -6,6 +6,8 @@ import { api } from '../database/db'
 import SearchableSelect from '../components/SearchableSelect'
 import TagInput from '../components/TagInput'
 import { useTheme } from '../context/ThemeContext'
+import ImageModal from '../components/ImageModal'
+import '../styles/ImageModal.css'
 
 const MiniOverview = () => {
   const { darkMode } = useTheme()
@@ -58,6 +60,10 @@ const MiniOverview = () => {
   // Add new state for edit modal
   const [showEditModal, setShowEditModal] = useState(false)
   const [editingMini, setEditingMini] = useState(null)
+
+  // Add state for image modal
+  const [showImageModal, setShowImageModal] = useState(false)
+  const [selectedImage, setSelectedImage] = useState(null)
 
   const fetchMinis = async () => {
     try {
@@ -342,17 +348,71 @@ const MiniOverview = () => {
     setSelectedTypes(selectedTypes.filter(type => type.id !== typeId))
   }
 
-  const handleImageUpload = (file) => {
-    if (!file) return
+  // Add this function to handle image compression
+  const compressImage = async (file) => {
+    return new Promise((resolve) => {
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        const img = new Image()
+        img.onload = () => {
+          const canvas = document.createElement('canvas')
+          let width = img.width
+          let height = img.height
+          
+          // Max dimensions
+          const MAX_WIDTH = 1200
+          const MAX_HEIGHT = 1200
+          
+          // Calculate new dimensions
+          if (width > height) {
+            if (width > MAX_WIDTH) {
+              height *= MAX_WIDTH / width
+              width = MAX_WIDTH
+            }
+          } else {
+            if (height > MAX_HEIGHT) {
+              width *= MAX_HEIGHT / height
+              height = MAX_HEIGHT
+            }
+          }
+          
+          canvas.width = width
+          canvas.height = height
+          
+          const ctx = canvas.getContext('2d')
+          ctx.drawImage(img, 0, 0, width, height)
+          
+          // Convert to WebP with reduced quality
+          const compressedImage = canvas.toDataURL('image/webp', 0.8)
+          resolve(compressedImage)
+        }
+        img.src = e.target.result
+      }
+      reader.readAsDataURL(file)
+    })
+  }
 
-    const reader = new FileReader()
-    reader.onload = (e) => {
-      setNewMini({
-        ...newMini,
-        image_path: e.target.result // Store base64 image data
-      })
+  // Update the image handling in both add and edit modals
+  const handleImageUpload = async (file) => {
+    if (!file) return
+    
+    try {
+      const compressedImage = await compressImage(file)
+      if (showAddModal) {
+        setNewMini({
+          ...newMini,
+          image_path: compressedImage
+        })
+      } else if (showEditModal) {
+        setEditingMini({
+          ...editingMini,
+          image_path: compressedImage
+        })
+      }
+    } catch (error) {
+      console.error('Error compressing image:', error)
+      setError('Error processing image. Please try again.')
     }
-    reader.readAsDataURL(file)
   }
 
   const handleProductSetSearch = (value) => {
@@ -430,36 +490,43 @@ const MiniOverview = () => {
       })
   }
 
-  // Add handleUpdateMini function
-  const handleUpdateMini = async (e) => {
-    e.preventDefault()
-    
-    // Reset previous validation errors
-    setError(null)
-    
-    // Check all validations
-    const newValidationErrors = {
-      name: !editingMini.name.trim(),
-      location: !editingMini.location.trim(),
-      categories: editingMini.categories.length === 0,
-      types: editingMini.types.length === 0
-    }
-    
-    setValidationErrors(newValidationErrors)
-    
-    if (Object.values(newValidationErrors).some(Boolean)) {
-      return
-    }
-    
+  // Update the handleUpdateMini function
+  const handleUpdateMini = async () => {
     try {
+      // Validate required fields
+      const errors = {
+        name: !editingMini.name.trim(),
+        location: !editingMini.location.trim(),
+        categories: !editingMini.categories?.length,
+        types: !editingMini.types?.length
+      }
+
+      if (Object.values(errors).some(Boolean)) {
+        setValidationErrors(errors)
+        return
+      }
+
       await api.put(`/api/minis/${editingMini.id}`, editingMini)
+      
+      // Refresh the entire minis list
+      await fetchMinis()
+
       setShowEditModal(false)
       setEditingMini(null)
-      fetchMinis()
-    } catch (err) {
-      console.error('Error updating mini:', err)
-      setError(err.response?.data?.error || err.message)
+      setValidationErrors({})
+    } catch (error) {
+      console.error('Error updating mini:', error)
+      setError('Error updating mini. Please try again.')
     }
+  }
+
+  // Add handler for image click
+  const handleImageClick = (mini) => {
+    setSelectedImage({
+      path: mini.original_image_path,
+      name: mini.name
+    })
+    setShowImageModal(true)
   }
 
   if (loading) return <div>Loading...</div>
@@ -512,8 +579,11 @@ const MiniOverview = () => {
                         width: '50px', 
                         height: '50px', 
                         objectFit: 'cover',
-                        marginRight: '10px'
+                        marginRight: '10px',
+                        cursor: 'pointer'
                       }}
+                      onClick={() => handleImageClick(mini)}
+                      title="Click to view full image"
                     />
                   )}
                   {mini.name}
@@ -1268,6 +1338,17 @@ const MiniOverview = () => {
           </Button>
         </Modal.Footer>
       </Modal>
+
+      {/* Add ImageModal */}
+      <ImageModal
+        show={showImageModal}
+        onHide={() => {
+          setShowImageModal(false)
+          setSelectedImage(null)
+        }}
+        imagePath={selectedImage?.path}
+        miniName={selectedImage?.name}
+      />
     </Container>
   )
 }
