@@ -6,9 +6,7 @@ import {
   faTable,
   faBoxes,
   faCubes,
-  faCog,
   faDatabase,
-  faPalette,
   faCode,
   faSun,
   faMoon
@@ -37,17 +35,11 @@ const Sidebar = () => {
         </MenuSection>
 
         <MenuSection title="SYSTEM">
-          <MenuItem icon={faCog} to="/settings">
-            Settings
-          </MenuItem>
           <MenuItem icon={faDatabase} to="/database">
             Database
           </MenuItem>
           <MenuItem icon={faCode} to="/manual-sql">
             Manual SQL
-          </MenuItem>
-          <MenuItem icon={faPalette} to="/ui">
-            UI Elements
           </MenuItem>
         </MenuSection>
       </div>
