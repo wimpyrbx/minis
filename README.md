@@ -1,8 +1,29 @@
-# React + Vite
+# D&D Miniatures Manager
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A web-based admin dashboard for managing your D&D miniature collection. Built with React, Vite, and Bootstrap.
 
-Currently, two official plugins are available:
+## Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- Dashboard with collection overview and statistics
+- Manage miniatures inventory
+- Track categories, sets, and manufacturers
+- Responsive Bootstrap-based UI
+- SQLite database backend
+
+## Tech Stack
+
+- **Frontend**: React 18 with Vite
+- **UI Framework**: Bootstrap 5 with React-Bootstrap
+- **State Management**: Redux Toolkit
+- **Routing**: React Router
+- **Database**: SQLite with Sequelize
+- **API**: Express.js (coming soon)
+
+## Getting Started
+
+1. Clone the repository
+2. Install dependencies:
+
+```bash
+npm install
+```

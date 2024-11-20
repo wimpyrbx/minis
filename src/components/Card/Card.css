@@ -1,0 +1,115 @@
+.card {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.08);
+  height: fit-content;
+  align-self: flex-start;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+}
+
+/* Grid system - adjusted to account for gaps */
+.card.md-12 { width: 100%; }
+.card.md-6 { flex: 0 0 calc(50% - 8px); }
+.card.md-4 { width: calc(33.333% - 10.667px); }
+.card.md-3 { width: calc(25% - 12px); }
+.card.md-2 { 
+  width: calc(16.666% - 13.333px);
+}
+
+.card-header {
+  padding: 8px 12px;
+  border-bottom: 1px solid #2c3440;
+  border-radius: 8px 8px 0 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: white;
+  margin: 0;
+}
+
+.card-header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.card-header-left i {
+  font-size: 1.2rem;
+  color: #8b949e;
+  margin-left: 3px;
+}
+
+.card-header-left h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-left: 3px;
+}
+
+.card-header-right {
+  display: flex;
+  align-items: center;
+  margin-right: 3px;
+}
+
+.card-body {
+  padding: 12px;
+  margin: 0;
+}
+
+/* Remove any bottom margin from last child in card body */
+.card-body > *:last-child {
+  margin-bottom: 0;
+}
+
+/* Remove margin from paragraphs in card body */
+.card-body p {
+  margin: 0;
+}
+
+/* Ensure lists in card body don't have extra spacing */
+.card-body ul, 
+.card-body ol {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.card-footer {
+  padding: 3px;
+  border-top: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 0 0 8px 8px;
+  margin: 0;
+}
+
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 3px;
+  width: 100%;
+  margin-top: 3px;
+}
+
+.card-grid:not(:last-child) {
+  margin-bottom: 3px;
+}
+
+/* Remove margin from Bootstrap elements inside card body */
+.card-body .mb-3,
+.card-body .mb-4 {
+  margin-bottom: 3px !important;
+}
+
+/* Adjust table margins in card body */
+.card-body table {
+  margin-bottom: 0;
+}
+
+/* Adjust form elements in card body */
+.card-body .form-control {
+  margin-bottom: 3px;
+}
+
+/* Remove extra spacing from pre elements */
+.card-body pre {
+  margin: 0;
+}
