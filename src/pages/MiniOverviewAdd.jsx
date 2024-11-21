@@ -435,7 +435,7 @@ const MiniOverviewAdd = ({ show, handleClose, categories, types, tags, productSe
               </Row>
 
               <Row>
-                <Col md={6}>
+                <Col md={5}>
                   <Form.Group className="mb-3">
                     <Form.Label>Tags</Form.Label>
                     <TagInput
@@ -446,7 +446,7 @@ const MiniOverviewAdd = ({ show, handleClose, categories, types, tags, productSe
                     />
                   </Form.Group>
                 </Col>
-                <Col md={6}>
+                <Col md={7}>
                   <Form.Group className="mb-3">
                     <Form.Label>Product Set</Form.Label>
                     <SearchableSelect

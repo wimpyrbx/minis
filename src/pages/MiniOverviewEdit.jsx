@@ -38,6 +38,9 @@ const MiniOverviewEdit = ({ show, handleClose, categories, types, tags, productS
       if (mini) {
         console.log('Initializing edit modal with mini:', mini)
         
+        // Split tag names into array if they exist
+        const tagNames = mini.tag_names ? mini.tag_names.split(',').map(tag => tag.trim()) : []
+        
         const newEditingMini = {
           id: mini.id,
           name: mini.name || '',
@@ -48,7 +51,7 @@ const MiniOverviewEdit = ({ show, handleClose, categories, types, tags, productS
           categories: mini.category_ids || [],
           types: mini.type_ids || [],
           proxy_types: mini.proxy_type_ids || [],
-          tags: mini.tag_ids || [],
+          tags: tagNames, // Use tag names instead of IDs
           product_sets: mini.product_set_ids || [],
           painted_by: mini.painted_by || 'prepainted'
         }
@@ -570,54 +573,18 @@ const MiniOverviewEdit = ({ show, handleClose, categories, types, tags, productS
               </Row>
 
               <Row>
-                <Col md={6}>
+                <Col md={5}>
                   <Form.Group className="mb-3">
                     <Form.Label>Tags</Form.Label>
                     <TagInput
-                      value={editingMini.tags.map(tagId => {
-                        const tag = tags.find(t => t.id.toString() === tagId)
-                        return tag ? tag.name : ''
-                      }).filter(Boolean)}
-                      onChange={(tagNames) => {
-                        const tagIds = tagNames.map(name => {
-                          const existingTag = tags.find(t => t.name.toLowerCase() === name.toLowerCase())
-                          return existingTag ? existingTag.id.toString() : name
-                        })
-                        console.log('Setting tags:', { tagNames, tagIds })
-                        setEditingMini(prev => ({
-                          ...prev,
-                          tags: tagIds
-                        }))
-                      }}
+                      value={editingMini.tags}
+                      onChange={(tags) => setEditingMini({...editingMini, tags})}
                       existingTags={tags.map(tag => tag.name)}
                       placeholder="Type tag and press Enter or comma to add..."
                     />
-                    <div className="mt-2">
-                      {editingMini.tags.map((tagId, index) => {
-                        const tag = typeof tagId === 'string' && tagId.match(/^\d+$/) 
-                          ? tags.find(t => t.id.toString() === tagId)
-                          : { id: `new-${index}`, name: tagId }
-                        
-                        return tag ? (
-                          <span
-                            key={tag.id}
-                            className="badge bg-primary me-1 mb-1"
-                            style={{ cursor: 'pointer' }}
-                            onClick={() => {
-                              setEditingMini(prev => ({
-                                ...prev,
-                                tags: prev.tags.filter(t => t !== tagId)
-                              }))
-                            }}
-                          >
-                            {tag.name} ×
-                          </span>
-                        ) : null
-                      })}
-                    </div>
                   </Form.Group>
                 </Col>
-                <Col md={6}>
+                <Col md={7}>
                   <Form.Group className="mb-3">
                     <Form.Label>Product Set</Form.Label>
                     <SearchableSelect
