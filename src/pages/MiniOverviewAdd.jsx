@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { Modal, Button, Form, Card, Row, Col } from 'react-bootstrap'
+import { Modal, Button, Form, Card, Row, Col, Alert } from 'react-bootstrap'
 import { faImage } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { api } from '../database/db'
@@ -30,6 +30,9 @@ const MiniOverviewAdd = ({ show, handleClose, categories, types, tags, productSe
     categories: false,
     types: false
   })
+
+  // Add error state
+  const [error, setError] = useState(null)
 
   // Handler for image upload and compression
   const handleImageUpload = async (file) => {
@@ -92,16 +95,9 @@ const MiniOverviewAdd = ({ show, handleClose, categories, types, tags, productSe
   }
 
   // Handler for adding a new mini
-  const handleAddMini = async (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
-
-    // Reset previous validation errors
-    setValidationErrors({
-      name: false,
-      location: false,
-      categories: false,
-      types: false
-    })
+    setError(null)
 
     // Validate required fields
     const errors = {
@@ -113,46 +109,145 @@ const MiniOverviewAdd = ({ show, handleClose, categories, types, tags, productSe
 
     setValidationErrors(errors)
 
-    // If any validation fails, stop here
     if (Object.values(errors).some(Boolean)) {
       return
     }
 
     try {
-      const miniToSave = {
-        ...newMini,
-        name: newMini.name.trim(),
-        location: newMini.location.trim(),
-        description: newMini.description.trim(),
+      const miniData = {
+        name: String(newMini.name.trim()),
+        description: String(newMini.description?.trim() || ''),
+        location: String(newMini.location.trim()),
+        quantity: String(newMini.quantity),
+        categories: newMini.categories,
+        types: newMini.types,
+        proxy_types: newMini.proxy_types,
+        product_sets: newMini.product_sets,
+        tag_ids: newMini.tags.map(tagName => tags.find(t => t.name === tagName)?.id.toString()).filter(Boolean),
+        tag_names: String(newMini.tags.join(',')),
+        painted_by: String(newMini.painted_by)
       }
 
-      const response = await api.post('/api/minis', miniToSave)
-      const savedMini = {
-        ...response.data,
-        image_path: response.data.image_path ? `${response.data.image_path}?t=${Date.now()}` : null,
-        original_image_path: response.data.original_image_path ? `${response.data.original_image_path}?t=${Date.now()}` : null
-      }
-
-      setMinis([savedMini, ...minis])
-      handleClose()
-      // Reset form
-      setNewMini({
-        name: '',
-        description: '',
-        location: '',
-        image_path: '',
-        quantity: 1,
-        categories: [],
-        types: [],
-        proxy_types: [],
-        tags: [],
-        product_sets: [],
-        painted_by: 'prepainted'
+      const formData = new FormData()
+      Object.entries(miniData).forEach(([key, value]) => {
+        if (Array.isArray(value)) {
+          formData.append(key, JSON.stringify(value))
+        } else {
+          formData.append(key, value)
+        }
       })
-    } catch (err) {
-      console.error('Error adding mini:', err)
-      alert(err.response?.data?.error || 'Failed to add mini.')
+
+      if (newMini.image_path && newMini.image_path.startsWith('data:')) {
+        formData.append('image', newMini.image_path)
+      }
+
+      const response = await api.post('/api/minis', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      })
+
+      const responseData = response.data
+
+      // Format the new mini to match the expected structure
+      const formattedMini = {
+        ...responseData,
+        ...miniData,
+        categories: miniData.category_names ? miniData.category_names.split(',').map(cat => cat.trim()) : [],
+        types: miniData.type_names ? miniData.type_names.split(',').map(type => type.trim()) : [],
+        proxyTypes: miniData.proxy_type_names ? miniData.proxy_type_names.split(',').map(type => type.trim()) : [],
+        tags: newMini.tags,
+        formattedProductSets: miniData.product_set_names ? 
+          miniData.product_set_names.split(',').map(setName => {
+            const matches = setName.trim().match(/(.+?)\s*\((.+?)\s+by\s+(.+?)\)/)
+            if (matches) {
+              const [_, setName, productLine, manufacturer] = matches
+              return {
+                manufacturer,
+                productLine,
+                setName
+              }
+            }
+            return { setName }
+          }) : []
+      }
+
+      setMinis(prevMinis => [...prevMinis, formattedMini])
+      handleClose()
+      resetForm()
+    } catch (error) {
+      console.error('Error adding mini:', error)
+      setError(error.response?.data?.error || error.message)
     }
+  }
+
+  // Add resetForm function if not already present
+  const resetForm = () => {
+    setNewMini({
+      name: '',
+      description: '',
+      location: '',
+      image_path: '',
+      quantity: 1,
+      categories: [],
+      types: [],
+      proxy_types: [],
+      tags: [],
+      product_sets: [],
+      painted_by: 'prepainted'
+    })
+    setValidationErrors({
+      name: false,
+      location: false,
+      categories: false,
+      types: false
+    })
+    setError(null)
+  }
+
+  // Update the getAvailableTypes function to properly filter types based on selected categories
+  const getAvailableTypes = (selectedCategoryIds) => {
+    return types.filter(type => 
+      // Type belongs to one of the selected categories
+      selectedCategoryIds.includes(type.category_id.toString()) &&
+      // Type is not already selected
+      !newMini.types.includes(type.id.toString())
+    )
+  }
+
+  // Update the handleCategoryChange function
+  const handleCategoryChange = (selectedCategories) => {
+    // Handle both array of categories and single category removal
+    let categoryIds
+    if (Array.isArray(selectedCategories)) {
+      categoryIds = selectedCategories.map(cat => cat.id.toString())
+    } else if (typeof selectedCategories === 'string') {
+      // If we're removing a category (passed as ID string)
+      categoryIds = newMini.categories.filter(id => id !== selectedCategories)
+    } else if (selectedCategories) {
+      // If single category selected
+      categoryIds = [...newMini.categories, selectedCategories.id.toString()]
+    } else {
+      categoryIds = []
+    }
+
+    // Find types that need to be removed (types whose categories are no longer selected)
+    const typesToRemove = newMini.types.filter(typeId => {
+      const type = types.find(t => t.id.toString() === typeId)
+      return type && !categoryIds.includes(type.category_id.toString())
+    })
+
+    // Calculate the remaining types after removal
+    const remainingTypes = newMini.types.filter(typeId => !typesToRemove.includes(typeId))
+
+    setNewMini(prev => ({
+      ...prev,
+      categories: categoryIds,
+      // Remove types that belong to unselected categories
+      types: remainingTypes,
+      // Clear proxy types if no types remain after category removal
+      proxy_types: remainingTypes.length === 0 ? [] : prev.proxy_types
+    }))
   }
 
   return (
@@ -161,7 +256,12 @@ const MiniOverviewAdd = ({ show, handleClose, categories, types, tags, productSe
         <Modal.Title>Add New Mini</Modal.Title>
       </Modal.Header>
       <Modal.Body>
-        <Form onSubmit={handleAddMini}>
+        {error && (
+          <Alert variant="danger" className="mb-3">
+            {error}
+          </Alert>
+        )}
+        <Form onSubmit={handleSubmit}>
           {/* Basic Information Card */}
           <Card className="mb-3">
             <Card.Header className="bg-light d-flex align-items-center">
@@ -335,25 +435,47 @@ const MiniOverviewAdd = ({ show, handleClose, categories, types, tags, productSe
                     <SearchableSelect
                       items={categories}
                       value={newMini.categories}
-                      onChange={(selectedCategories) => setNewMini({...newMini, categories: selectedCategories })}
+                      onChange={(selectedCategories) => {
+                        // Handle both single and multiple selections
+                        let categoryIds
+                        if (Array.isArray(selectedCategories)) {
+                          categoryIds = selectedCategories.map(cat => cat.id.toString())
+                        } else if (selectedCategories) {
+                          categoryIds = [...newMini.categories, selectedCategories.id.toString()]
+                        } else {
+                          categoryIds = []
+                        }
+
+                        // Find types that need to be removed (types whose categories are no longer selected)
+                        const typesToRemove = newMini.types.filter(typeId => {
+                          const type = types.find(t => t.id.toString() === typeId)
+                          return type && !categoryIds.includes(type.category_id.toString())
+                        })
+
+                        // Calculate remaining types
+                        const remainingTypes = newMini.types.filter(typeId => !typesToRemove.includes(typeId))
+
+                        setNewMini(prev => ({
+                          ...prev,
+                          categories: categoryIds,
+                          types: remainingTypes,
+                          proxy_types: remainingTypes.length === 0 ? [] : prev.proxy_types
+                        }))
+                      }}
                       placeholder="Search categories..."
+                      renderOption={(cat) => cat.name}
                       isInvalid={validationErrors.categories}
                       multiple
                     />
                     <div className="mt-2">
-                      {newMini.categories.map(catId => {
+                      {Array.isArray(newMini.categories) && newMini.categories.map(catId => {
                         const category = categories.find(c => c.id.toString() === catId)
                         return category ? (
                           <span
                             key={category.id}
-                            className="badge bg-primary me-1 mb-1"
+                            className="badge bg-secondary me-1 mb-1"
                             style={{ cursor: 'pointer' }}
-                            onClick={() => {
-                              setNewMini(prev => ({
-                                ...prev,
-                                categories: prev.categories.filter(id => id !== catId)
-                              }))
-                            }}
+                            onClick={() => handleCategoryChange(catId)}
                           >
                             {category.name} ×
                           </span>
@@ -368,30 +490,56 @@ const MiniOverviewAdd = ({ show, handleClose, categories, types, tags, productSe
                       Types <span className="text-danger">*</span>
                     </Form.Label>
                     <SearchableSelect
-                      items={types.filter(type => newMini.categories.includes(type.category_id.toString()))}
+                      items={getAvailableTypes(newMini.categories)}
                       value={newMini.types}
-                      onChange={(selectedTypes) => setNewMini({...newMini, types: selectedTypes })}
+                      onChange={(selectedTypes) => {
+                        // Handle both single and multiple selections
+                        let typeIds
+                        if (Array.isArray(selectedTypes)) {
+                          typeIds = selectedTypes.map(type => type.id.toString())
+                        } else if (selectedTypes) {
+                          typeIds = [...newMini.types, selectedTypes.id.toString()]
+                        } else {
+                          typeIds = []
+                        }
+
+                        setNewMini(prev => ({
+                          ...prev,
+                          types: typeIds,
+                          proxy_types: typeIds.length === 0 ? [] : prev.proxy_types
+                        }))
+                      }}
                       placeholder="Search types..."
-                      renderOption={(type) => `${type.category_name}: ${type.name}`}
+                      renderOption={(type) => {
+                        const category = categories.find(c => c.id.toString() === type.category_id.toString())
+                        return `${category?.name || ''}: ${type.name}`
+                      }}
                       isInvalid={validationErrors.types}
+                      disabled={newMini.categories.length === 0}
                       multiple
                     />
                     <div className="mt-2">
-                      {newMini.types.map(typeId => {
+                      {Array.isArray(newMini.types) && newMini.types.map(typeId => {
                         const type = types.find(t => t.id.toString() === typeId)
+                        const category = type ? categories.find(c => c.id.toString() === type.category_id.toString()) : null
                         return type ? (
                           <span
                             key={type.id}
-                            className="badge bg-primary me-1 mb-1"
+                            className="badge bg-info me-1 mb-1"
                             style={{ cursor: 'pointer' }}
                             onClick={() => {
-                              setNewMini(prev => ({
-                                ...prev,
-                                types: prev.types.filter(id => id !== typeId)
-                              }))
+                              setNewMini(prev => {
+                                const updatedTypes = prev.types.filter(id => id !== typeId)
+                                return {
+                                  ...prev,
+                                  types: updatedTypes,
+                                  // Clear proxy types if no types remain
+                                  proxy_types: updatedTypes.length === 0 ? [] : prev.proxy_types
+                                }
+                              })
                             }}
                           >
-                            {`${type.category_name}: ${type.name}`} ×
+                            {`${category?.name || ''}: ${type.name}`} ×
                           </span>
                         ) : null
                       })}
@@ -402,21 +550,36 @@ const MiniOverviewAdd = ({ show, handleClose, categories, types, tags, productSe
                   <Form.Group className="mb-3">
                     <Form.Label>Proxy Types</Form.Label>
                     <SearchableSelect
-                      items={types.filter(type => !newMini.types.includes(type.id.toString()))}
+                      items={types.filter(type => !newMini.proxy_types.includes(type.id.toString()))}
                       value={newMini.proxy_types}
-                      onChange={(selectedProxyTypes) => setNewMini({...newMini, proxy_types: selectedProxyTypes })}
+                      onChange={(selectedProxyTypes) => {
+                        // Handle both single and multiple selections
+                        let proxyTypeIds
+                        if (Array.isArray(selectedProxyTypes)) {
+                          proxyTypeIds = selectedProxyTypes.map(type => type.id.toString())
+                        } else if (selectedProxyTypes) {
+                          proxyTypeIds = [...newMini.proxy_types, selectedProxyTypes.id.toString()]
+                        } else {
+                          proxyTypeIds = []
+                        }
+
+                        setNewMini(prev => ({
+                          ...prev,
+                          proxy_types: proxyTypeIds
+                        }))
+                      }}
                       placeholder="Search proxy types..."
                       renderOption={(type) => `${type.category_name}: ${type.name}`}
                       disabled={newMini.types.length === 0}
                       multiple
                     />
                     <div className="mt-2">
-                      {newMini.proxy_types.map(typeId => {
+                      {Array.isArray(newMini.proxy_types) && newMini.proxy_types.map(typeId => {
                         const type = types.find(t => t.id.toString() === typeId)
                         return type ? (
                           <span
                             key={type.id}
-                            className="badge bg-primary me-1 mb-1"
+                            className="badge bg-warning text-dark me-1 mb-1"
                             style={{ cursor: 'pointer' }}
                             onClick={() => {
                               setNewMini(prev => ({
@@ -450,24 +613,23 @@ const MiniOverviewAdd = ({ show, handleClose, categories, types, tags, productSe
                   <Form.Group className="mb-3">
                     <Form.Label>Product Set</Form.Label>
                     <SearchableSelect
-                      items={productSets.filter(set => 
-                        !newMini.product_sets.includes(set.id.toString())
-                      )}
+                      items={productSets.filter(set => !newMini.product_sets.includes(set.id.toString()))}
                       value={newMini.product_sets}
-                      onChange={(selectedSet) => {
-                        // If single set is selected (not array)
-                        if (!Array.isArray(selectedSet)) {
-                          setNewMini(prev => ({
-                            ...prev,
-                            product_sets: [...prev.product_sets, selectedSet.id.toString()]
-                          }))
+                      onChange={(selectedSets) => {
+                        // Handle both single and multiple selections
+                        let setIds
+                        if (Array.isArray(selectedSets)) {
+                          setIds = selectedSets.map(set => set.id.toString())
+                        } else if (selectedSets) {
+                          setIds = [...newMini.product_sets, selectedSets.id.toString()]
                         } else {
-                          // If multiple sets are selected (array)
-                          setNewMini(prev => ({
-                            ...prev,
-                            product_sets: selectedSet.map(set => set.id.toString())
-                          }))
+                          setIds = []
                         }
+
+                        setNewMini(prev => ({
+                          ...prev,
+                          product_sets: setIds
+                        }))
                       }}
                       placeholder="Search product sets..."
                       renderOption={(set) => `${set.manufacturer_name} » ${set.product_line_name} » ${set.name}`}
@@ -506,7 +668,7 @@ const MiniOverviewAdd = ({ show, handleClose, categories, types, tags, productSe
         </Button>
         <Button 
           variant="primary" 
-          onClick={handleAddMini}
+          onClick={handleSubmit}
           disabled={!newMini.name.trim() || !newMini.location.trim() || newMini.categories.length === 0 || newMini.types.length === 0}
         >
           Add Mini

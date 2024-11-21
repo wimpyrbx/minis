@@ -10,6 +10,10 @@ import ImageModal from '../components/ImageModal'
 import { useTheme } from '../context/ThemeContext'
 import TableButton from '../components/TableButton'
 
+const styles = {
+  fontSize: '0.75rem'  // Even smaller, equivalent to 12px
+}
+
 const MiniOverview = () => {
   const { darkMode } = useTheme()
   
@@ -150,9 +154,26 @@ const MiniOverview = () => {
   }
 
   // Handle Edit Mini
-  const handleEditMini = (mini) => {
-    setEditingMini(mini)
-    setShowEditModal(true)
+  const handleEditMini = async (mini) => {
+    try {
+      // Fetch the latest data for this mini including all relationships
+      const response = await api.get(`/api/minis/${mini.id}/relationships`)
+      const miniWithRelationships = response.data
+
+      // Set the editingMini with complete data
+      setEditingMini({
+        ...miniWithRelationships,
+        category_ids: miniWithRelationships.categories,
+        type_ids: miniWithRelationships.types,
+        proxy_type_ids: miniWithRelationships.proxy_types,
+        tags: miniWithRelationships.tags,
+        product_set_ids: miniWithRelationships.product_sets
+      })
+      setShowEditModal(true)
+    } catch (error) {
+      console.error('Error fetching mini relationships:', error)
+      setError(error.response?.data?.error || error.message)
+    }
   }
 
   // Handle Delete Mini
@@ -177,11 +198,10 @@ const MiniOverview = () => {
     setShowImageModal(true)
   }
 
-  if (loading) return <div>Loading...</div>
   if (error) return <div>Error: {error}</div>
 
   return (
-    <Container fluid className="content">
+    <Container fluid className="content" style={styles}>
       <Card className="mb-4">
         <Card.Body className="d-flex align-items-center">
           <FontAwesomeIcon icon={faPhotoFilm} className="text-info me-3" size="2x" />
@@ -241,18 +261,18 @@ const MiniOverview = () => {
 
         {/* Conditional rendering based on view type */}
         {viewType === 'table' ? (
-          <Table hover responsive className="table-with-actions">
+          <Table hover responsive className="table-with-actions small-text">
             <thead>
               <tr>
                 <th style={{ width: '50px' }}></th>
-                <th>Name</th>
-                <th>Location</th>
+                <th style={{ whiteSpace: 'nowrap' }}>Name</th>
+                <th style={{ whiteSpace: 'nowrap' }}>Location</th>
                 <th>Categories</th>
                 <th>Types</th>
                 <th>Proxy Types</th>
                 <th>Product Sets</th>
-                <th>Tags</th>
-                <th>Quantity</th>
+                <th style={{ width: '150px', maxWidth: '150px' }}>Tags</th>
+                <th style={{ textAlign: 'center' }}>QTY</th>
                 <th className="action-column"></th>
               </tr>
             </thead>
@@ -275,7 +295,7 @@ const MiniOverview = () => {
                       />
                     )}
                   </td>
-                  <td>
+                  <td style={{ whiteSpace: 'nowrap' }}>
                     <a 
                       href={`https://www.miniscollector.com/minis/gallery?title=${encodeURIComponent(mini.name)}`}
                       target="_blank"
@@ -285,13 +305,30 @@ const MiniOverview = () => {
                       {mini.name}
                     </a>
                   </td>
-                  <td>{mini.location}</td>
+                  <td style={{ whiteSpace: 'nowrap' }}>{mini.location}</td>
                   <td>{mini.category_names?.split(',').join(', ')}</td>
                   <td>{mini.type_names?.split(',').join(', ')}</td>
                   <td>{mini.proxy_type_names?.split(',').join(', ')}</td>
-                  <td>{mini.product_set_names?.split(',').join(', ')}</td>
-                  <td>{mini.tag_names?.split(',').join(', ')}</td>
-                  <td>{mini.quantity}</td>
+                  <td>
+                    {mini.product_set_names?.split(',').map((setName, index) => {
+                      const matches = setName.trim().match(/(.+?)\s*\((.+?)\s+by\s+(.+?)\)/)
+                      if (matches) {
+                        const [_, setName, productLine, manufacturer] = matches
+                        return (
+                          <div key={index} style={{ marginBottom: index < mini.product_set_names.split(',').length - 1 ? '1rem' : 0 }}>
+                            <div className="fw-bold">{manufacturer}</div>
+                            <div>· {productLine}</div>
+                            <div>·· {setName}</div>
+                          </div>
+                        )
+                      }
+                      return setName
+                    })}
+                  </td>
+                  <td style={{ width: '150px', maxWidth: '150px', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    {mini.tag_names?.split(',').join(', ')}
+                  </td>
+                  <td style={{ textAlign: 'center' }}>{mini.quantity}</td>
                   <td className="action-column">
                     <div className="action-column-content">
                       <TableButton
@@ -321,10 +358,29 @@ const MiniOverview = () => {
           </Table>
         ) : (
           <MiniCardGrid
-            minis={paginatedMinis}
+            minis={paginatedMinis.map(mini => ({
+              ...mini,
+              formattedProductSets: mini.product_set_names?.split(',').map(setName => {
+                const matches = setName.trim().match(/(.+?)\s*\((.+?)\s+by\s+(.+?)\)/)
+                if (matches) {
+                  const [_, setName, productLine, manufacturer] = matches
+                  return {
+                    manufacturer,
+                    productLine,
+                    setName
+                  }
+                }
+                return { setName }
+              }),
+              categories: mini.category_names?.split(',').map(cat => cat.trim()),
+              types: mini.type_names?.split(',').map(type => type.trim()),
+              proxyTypes: mini.proxy_type_names?.split(',').map(type => type.trim()),
+              tags: mini.tag_names?.split(',').map(tag => tag.trim())
+            }))}
             onEdit={handleEditMini}
             onDelete={handleDeleteMini}
             onImageClick={handleImageClick}
+            darkMode={darkMode}
           />
         )}
       </div>

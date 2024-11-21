@@ -458,7 +458,7 @@ const MiniOverviewEdit = ({ show, handleClose, categories, types, tags, productS
                         return category ? (
                           <span
                             key={category.id}
-                            className="badge bg-primary me-1 mb-1"
+                            className="badge bg-secondary me-1 mb-1"
                             style={{ cursor: 'pointer' }}
                             onClick={() => handleRemoveCategory(catId)}
                           >
@@ -508,9 +508,18 @@ const MiniOverviewEdit = ({ show, handleClose, categories, types, tags, productS
                         return type ? (
                           <span
                             key={type.id}
-                            className="badge bg-primary me-1 mb-1"
+                            className="badge bg-info me-1 mb-1"
                             style={{ cursor: 'pointer' }}
-                            onClick={() => handleRemoveType(typeId)}
+                            onClick={() => {
+                              setEditingMini(prev => {
+                                const updatedTypes = prev.types.filter(id => id !== typeId)
+                                return {
+                                  ...prev,
+                                  types: updatedTypes,
+                                  proxy_types: updatedTypes.length === 0 ? [] : prev.proxy_types
+                                }
+                              })
+                            }}
                           >
                             {`${type.category_name}: ${type.name}`} ×
                           </span>
@@ -554,7 +563,7 @@ const MiniOverviewEdit = ({ show, handleClose, categories, types, tags, productS
                         return type ? (
                           <span
                             key={type.id}
-                            className="badge bg-primary me-1 mb-1"
+                            className="badge bg-warning text-dark me-1 mb-1"
                             style={{ cursor: 'pointer' }}
                             onClick={() => {
                               setEditingMini(prev => ({

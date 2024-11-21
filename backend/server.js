@@ -7,6 +7,8 @@ const fs = require('fs/promises')
 const sharp = require('sharp')
 const { mkdirp } = require('mkdirp')
 const fsSync = require('fs')
+const multer = require('multer')
+const upload = multer()
 
 const app = express()
 app.use(cors())
@@ -658,15 +660,38 @@ async function deleteImages(miniId) {
 }
 
 // Modify the POST endpoint for minis
-app.post('/api/minis', async (req, res) => {
+app.post('/api/minis', upload.none(), async (req, res) => {
   try {
+    console.log('Received request body:', req.body)
     await db.run('BEGIN TRANSACTION')
     
+    // Parse JSON strings back to arrays
     const {
       name, description, location, image_path,
       quantity, categories, types, proxy_types, 
-      tags, product_sets
+      tags, tag_ids, product_sets
     } = req.body
+
+    // Parse JSON strings if they're strings
+    const parsedCategories = typeof categories === 'string' ? JSON.parse(categories) : categories
+    const parsedTypes = typeof types === 'string' ? JSON.parse(types) : types
+    const parsedProxyTypes = typeof proxy_types === 'string' ? JSON.parse(proxy_types) : proxy_types
+    const parsedProductSets = typeof product_sets === 'string' ? JSON.parse(product_sets) : product_sets
+    const parsedTags = typeof tags === 'string' ? JSON.parse(tags) : tags
+    const parsedTagIds = typeof tag_ids === 'string' ? JSON.parse(tag_ids) : tag_ids
+
+    console.log('Parsed data:', {
+      name,
+      description,
+      location,
+      quantity,
+      categories: parsedCategories,
+      types: parsedTypes,
+      proxy_types: parsedProxyTypes,
+      tags: parsedTags,
+      tag_ids: parsedTagIds,
+      product_sets: parsedProductSets
+    })
 
     // Insert the main mini record first to get the ID
     const result = await db.run(
@@ -675,19 +700,20 @@ app.post('/api/minis', async (req, res) => {
         quantity, created_at, updated_at
       ) VALUES (?, ?, ?, ?, datetime('now'), datetime('now'))`,
       [
-        name.trim(),
+        name?.trim(),
         description?.trim() || null,
-        location.trim(),
+        location?.trim(),
         quantity || 1
       ]
     )
 
     const miniId = result.lastID
+    console.log('Created mini with ID:', miniId)
 
     // Process image if provided
     if (image_path) {
+      console.log('Processing image for mini:', miniId)
       const imagePaths = await processAndSaveImage(image_path, miniId)
-      // Update the mini record with both image paths
       await db.run(
         'UPDATE minis SET image_path = ?, original_image_path = ? WHERE id = ?',
         [imagePaths.thumbnail, imagePaths.original, miniId]
@@ -695,9 +721,9 @@ app.post('/api/minis', async (req, res) => {
     }
 
     // Insert categories
-    if (categories?.length > 0) {
-      console.log('Inserting categories:', categories)
-      for (const categoryId of categories) {
+    if (parsedCategories?.length > 0) {
+      console.log('Inserting categories:', parsedCategories)
+      for (const categoryId of parsedCategories) {
         await db.run(
           'INSERT INTO mini_to_categories (mini_id, category_id) VALUES (?, ?)',
           [miniId, categoryId]
@@ -706,9 +732,9 @@ app.post('/api/minis', async (req, res) => {
     }
 
     // Insert types
-    if (types?.length > 0) {
-      console.log('Inserting types:', types)
-      for (const typeId of types) {
+    if (parsedTypes?.length > 0) {
+      console.log('Inserting types:', parsedTypes)
+      for (const typeId of parsedTypes) {
         await db.run(
           'INSERT INTO mini_to_types (mini_id, type_id) VALUES (?, ?)',
           [miniId, typeId]
@@ -717,9 +743,9 @@ app.post('/api/minis', async (req, res) => {
     }
 
     // Insert proxy types
-    if (proxy_types?.length > 0) {
-      console.log('Inserting proxy types:', proxy_types)
-      for (const typeId of proxy_types) {
+    if (parsedProxyTypes?.length > 0) {
+      console.log('Inserting proxy types:', parsedProxyTypes)
+      for (const typeId of parsedProxyTypes) {
         await db.run(
           'INSERT INTO mini_to_proxy_types (mini_id, type_id) VALUES (?, ?)',
           [miniId, typeId]
@@ -728,9 +754,9 @@ app.post('/api/minis', async (req, res) => {
     }
 
     // Insert tags
-    if (tags?.length > 0) {
-      console.log('Processing tags:', tags)
-      for (const tagName of tags) {
+    if (parsedTags?.length > 0) {
+      console.log('Processing tags:', parsedTags)
+      for (const tagName of parsedTags) {
         // Try to get existing tag
         console.log('Looking up tag:', tagName)
         let tagResult = await db.get('SELECT id FROM tags WHERE name = ?', tagName)
@@ -752,9 +778,9 @@ app.post('/api/minis', async (req, res) => {
     }
 
     // Insert product sets
-    if (product_sets?.length > 0) {
-      console.log('Inserting product sets:', product_sets)
-      for (const setId of product_sets) {
+    if (parsedProductSets?.length > 0) {
+      console.log('Inserting product sets:', parsedProductSets)
+      for (const setId of parsedProductSets) {
         await db.run(
           'INSERT INTO mini_to_product_sets (mini_id, set_id) VALUES (?, ?)',
           [miniId, setId]
@@ -792,6 +818,7 @@ app.post('/api/minis', async (req, res) => {
       WHERE m.id = ?
       GROUP BY m.id
     `, miniId)
+
     console.log('Returning mini data:', mini)
     res.status(201).json(mini)
 
@@ -800,7 +827,7 @@ app.post('/api/minis', async (req, res) => {
     console.error('Error during mini creation, rolling back:', error)
     console.error('Stack trace:', error.stack)
     await db.run('ROLLBACK')
-    throw error
+    res.status(500).json({ error: error.message })
   }
 })
 
