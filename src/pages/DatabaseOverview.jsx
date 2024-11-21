@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react'
-import { Container, Card, Nav, Table } from 'react-bootstrap'
+import { Container, Card, Nav, Table, Form } from 'react-bootstrap'
 import { faDatabase } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { api } from '../database/db'
+import fs from 'fs'
 
 const DatabaseOverview = () => {
   const [tables, setTables] = useState([])
@@ -10,6 +11,33 @@ const DatabaseOverview = () => {
   const [tableData, setTableData] = useState({})
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [paintedBy, setPaintedBy] = useState('unpainted')
+
+  // Function to export schema to file
+  const exportSchemaToFile = async (schemas) => {
+    try {
+      const response = await api.post('/api/export-schema', { schemas })
+      console.log('Schema exported successfully')
+    } catch (err) {
+      console.error('Error exporting schema:', err)
+    }
+  }
+
+  // Fetch all table schemas
+  const fetchAllSchemas = async () => {
+    try {
+      const allSchemas = []
+      for (const table of tables) {
+        const response = await api.get(`/api/database/${table}`)
+        if (response.data.schema) {
+          allSchemas.push(response.data.schema)
+        }
+      }
+      await exportSchemaToFile(allSchemas)
+    } catch (err) {
+      console.error('Error fetching schemas:', err)
+    }
+  }
 
   // Fetch list of all tables on component mount
   useEffect(() => {
@@ -25,13 +53,15 @@ const DatabaseOverview = () => {
           if (!activeTable && tableNames.length > 0) {
             setActiveTable(tableNames[0])
           }
+          // Re-add this line to trigger schema export
+          await fetchAllSchemas()
         }
       } catch (err) {
         setError(err.message)
       }
     }
     fetchTables()
-  }, [activeTable])
+  }, [])
 
   // Fetch data for active table
   useEffect(() => {

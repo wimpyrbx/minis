@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { Container, Row, Col, Form, Button, Alert, Card, Modal } from 'react-bootstrap'
 import { faCubes, faTrash, faLayerGroup, faCube, faPencil, faPlus } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
@@ -84,17 +84,25 @@ const MinisAdmin = () => {
     try {
       await api.post('/api/categories', newCategory)
       setNewCategory({ name: '', image_path: '' })
+      categoryNameInputRef.current?.focus()
       fetchData()
     } catch (err) {
       setError(err.message)
     }
   }
 
+  const typeNameInputRef = useRef(null)
+
   const handleAddType = async (e) => {
     e.preventDefault()
     try {
       await api.post('/api/types', newType)
-      setNewType({ name: '', category_id: '', image_path: '' })
+      setNewType(prev => ({ 
+        name: '', 
+        category_id: prev.category_id,
+        image_path: '' 
+      }))
+      typeNameInputRef.current?.focus()
       fetchData()
     } catch (err) {
       setError(err.message)
@@ -173,6 +181,9 @@ const MinisAdmin = () => {
     return type.name.trim() !== '' && type.category_id !== ''
   }
 
+  // Add this near the top with other refs
+  const categoryNameInputRef = useRef(null)
+
   return (
     <Container fluid className="content">
       <Card className="mb-4">
@@ -203,6 +214,7 @@ const MinisAdmin = () => {
                     <Form.Group className="mb-3">
                       <Form.Label>Name</Form.Label>
                       <Form.Control
+                        ref={categoryNameInputRef}
                         type="text"
                         value={newCategory.name}
                         onChange={(e) => setNewCategory({...newCategory, name: e.target.value})}
@@ -258,6 +270,7 @@ const MinisAdmin = () => {
                     <Form.Group className="mb-3">
                       <Form.Label>Name</Form.Label>
                       <Form.Control
+                        ref={typeNameInputRef}
                         type="text"
                         value={newType.name}
                         onChange={(e) => setNewType({...newType, name: e.target.value})}

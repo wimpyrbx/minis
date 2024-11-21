@@ -31,144 +31,6 @@ async function initDatabase() {
       driver: sqlite3.Database
     })
     
-    await db.exec('PRAGMA foreign_keys = ON;')
-    
-    // Create tables - split into separate statements
-    const statements = [
-      `CREATE TABLE IF NOT EXISTS mini_categories (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          name TEXT NOT NULL,
-          image_path TEXT,
-          UNIQUE(name)
-      );`,
-      `CREATE INDEX IF NOT EXISTS idx_mini_categories_name ON mini_categories(name);`,
-
-      `CREATE TABLE IF NOT EXISTS mini_types (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          name TEXT NOT NULL,
-          category_id INTEGER NOT NULL,
-          image_path TEXT,
-          FOREIGN KEY (category_id) REFERENCES mini_categories(id) ON DELETE CASCADE,
-          UNIQUE(name, category_id)
-      );`,
-      `CREATE INDEX IF NOT EXISTS idx_mini_types_category ON mini_types(category_id);`,
-      `CREATE INDEX IF NOT EXISTS idx_mini_types_name ON mini_types(name);`,
-
-      `CREATE TABLE IF NOT EXISTS production_companies (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          name TEXT NOT NULL,
-          UNIQUE(name)
-      );`,
-      `CREATE INDEX IF NOT EXISTS idx_production_companies_name ON production_companies(name);`,
-
-      `CREATE TABLE IF NOT EXISTS product_lines (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          name TEXT NOT NULL,
-          company_id INTEGER NOT NULL,
-          FOREIGN KEY (company_id) REFERENCES production_companies(id) ON DELETE CASCADE,
-          UNIQUE(name, company_id)
-      );`,
-      `CREATE INDEX IF NOT EXISTS idx_product_lines_company ON product_lines(company_id);`,
-      `CREATE INDEX IF NOT EXISTS idx_product_lines_name ON product_lines(name);`,
-
-      `CREATE TABLE IF NOT EXISTS product_sets (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          name TEXT NOT NULL,
-          product_line_id INTEGER NOT NULL,
-          FOREIGN KEY (product_line_id) REFERENCES product_lines(id) ON DELETE CASCADE,
-          UNIQUE(name, product_line_id)
-      );`,
-      `CREATE INDEX IF NOT EXISTS idx_product_sets_line ON product_sets(product_line_id);`,
-      `CREATE INDEX IF NOT EXISTS idx_product_sets_name ON product_sets(name);`,
-
-      `CREATE TABLE IF NOT EXISTS tags (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          name TEXT NOT NULL,
-          UNIQUE(name)
-      );`,
-      `CREATE INDEX IF NOT EXISTS idx_tags_name ON tags(name);`,
-
-      `CREATE TABLE IF NOT EXISTS minis (
-          id INTEGER PRIMARY KEY AUTOINCREMENT,
-          name TEXT NOT NULL,
-          description TEXT,
-          location TEXT NOT NULL,
-          image_path TEXT,
-          original_image_path TEXT,
-          quantity INTEGER DEFAULT 1 CHECK (quantity >= 0),
-          created_at TEXT DEFAULT (datetime('now')),
-          updated_at TEXT DEFAULT (datetime('now'))
-      );`,
-      `CREATE INDEX IF NOT EXISTS idx_minis_name ON minis(name);`,
-
-      `CREATE TABLE IF NOT EXISTS mini_to_categories (
-          mini_id INTEGER NOT NULL,
-          category_id INTEGER NOT NULL,
-          FOREIGN KEY (mini_id) REFERENCES minis(id) ON DELETE CASCADE,
-          FOREIGN KEY (category_id) REFERENCES mini_categories(id) ON DELETE CASCADE,
-          PRIMARY KEY (mini_id, category_id)
-      );`,
-      `CREATE INDEX IF NOT EXISTS idx_mini_to_categories_mini ON mini_to_categories(mini_id);`,
-      `CREATE INDEX IF NOT EXISTS idx_mini_to_categories_category ON mini_to_categories(category_id);`,
-
-      `CREATE TABLE IF NOT EXISTS mini_to_types (
-          mini_id INTEGER NOT NULL,
-          type_id INTEGER NOT NULL,
-          FOREIGN KEY (mini_id) REFERENCES minis(id) ON DELETE CASCADE,
-          FOREIGN KEY (type_id) REFERENCES mini_types(id) ON DELETE CASCADE,
-          PRIMARY KEY (mini_id, type_id)
-      );`,
-      `CREATE INDEX IF NOT EXISTS idx_mini_to_types_mini ON mini_to_types(mini_id);`,
-      `CREATE INDEX IF NOT EXISTS idx_mini_to_types_type ON mini_to_types(type_id);`,
-
-      `CREATE TABLE IF NOT EXISTS mini_to_product_sets (
-          mini_id INTEGER NOT NULL,
-          set_id INTEGER NOT NULL,
-          FOREIGN KEY (mini_id) REFERENCES minis(id) ON DELETE CASCADE,
-          FOREIGN KEY (set_id) REFERENCES product_sets(id) ON DELETE CASCADE,
-          PRIMARY KEY (mini_id, set_id)
-      );`,
-      `CREATE INDEX IF NOT EXISTS idx_mini_to_product_sets_mini ON mini_to_product_sets(mini_id);`,
-      `CREATE INDEX IF NOT EXISTS idx_mini_to_product_sets_set ON mini_to_product_sets(set_id);`,
-
-      `CREATE TABLE IF NOT EXISTS mini_to_tags (
-          mini_id INTEGER NOT NULL,
-          tag_id INTEGER NOT NULL,
-          FOREIGN KEY (mini_id) REFERENCES minis(id) ON DELETE CASCADE,
-          FOREIGN KEY (tag_id) REFERENCES tags(id) ON DELETE CASCADE,
-          PRIMARY KEY (mini_id, tag_id)
-      );`,
-      `CREATE INDEX IF NOT EXISTS idx_mini_to_tags_mini ON mini_to_tags(mini_id);`,
-      `CREATE INDEX IF NOT EXISTS idx_mini_to_tags_tag ON mini_to_tags(tag_id);`,
-
-      `CREATE TABLE IF NOT EXISTS mini_to_proxy_types (
-          mini_id INTEGER NOT NULL,
-          type_id INTEGER NOT NULL,
-          FOREIGN KEY (mini_id) REFERENCES minis(id) ON DELETE CASCADE,
-          FOREIGN KEY (type_id) REFERENCES mini_types(id) ON DELETE CASCADE,
-          PRIMARY KEY (mini_id, type_id)
-      );`,
-      `CREATE INDEX IF NOT EXISTS idx_mini_to_proxy_types_mini ON mini_to_proxy_types(mini_id);`,
-      `CREATE INDEX IF NOT EXISTS idx_mini_to_proxy_types_type ON mini_to_proxy_types(type_id);`,
-
-      `CREATE TABLE IF NOT EXISTS settings (
-          settings_id INTEGER PRIMARY KEY AUTOINCREMENT,
-          setting_name TEXT NOT NULL UNIQUE,
-          setting_value TEXT NOT NULL
-      );`,
-
-      `INSERT OR IGNORE INTO settings (setting_name, setting_value) 
-       VALUES ('collection_show_entries_per_page', '10');`,
-       
-      `INSERT OR IGNORE INTO settings (setting_name, setting_value) 
-       VALUES ('collection_viewtype', 'table');`
-    ]
-
-    // Execute each statement separately
-    for (const statement of statements) {
-      await db.exec(statement)
-    }
-
     console.log('Database initialized successfully')
 
     // Add status endpoint
@@ -1265,6 +1127,72 @@ app.delete('/api/tags/cleanup', async (req, res) => {
     `)
     res.status(204).send()
   } catch (error) {
+    res.status(500).json({ error: error.message })
+  }
+}) 
+
+// Add this near your other endpoints, before the error handler
+app.post('/api/export-schema', async (req, res) => {
+  try {
+    // Get all table names
+    const tables = await db.all(`
+      SELECT name 
+      FROM sqlite_master 
+      WHERE type='table' 
+      ORDER BY name
+    `)
+
+    // Get schema for each table
+    const allSchemas = []
+    for (const table of tables) {
+      // Get table schema
+      const schemaResult = await db.get(`
+        SELECT sql 
+        FROM sqlite_master 
+        WHERE type='table' AND name=?
+      `, [table.name])
+
+      if (schemaResult?.sql) {
+        // Format the schema nicely
+        const formattedSchema = schemaResult.sql
+          .replace(/,/g, ',\n    ') // Add newlines after commas
+          .replace(/\(/g, ' (\n    ') // Add newline after opening parenthesis
+          .replace(/\)/g, '\n)') // Add newline before closing parenthesis
+          .replace(/CREATE TABLE/g, '\nCREATE TABLE') // Add newline before CREATE TABLE
+
+        allSchemas.push(formattedSchema)
+      }
+    }
+    
+    // Create the export directory path - one level up from __dirname
+    const exportDir = path.join(__dirname, '..', 'src', 'database')
+    const exportPath = path.join(exportDir, 'database.export.txt')
+    
+    // Create the directory if it doesn't exist
+    await fs.mkdir(exportDir, { recursive: true })
+    
+    // Format the schemas with timestamps and separators
+    const timestamp = new Date().toISOString()
+    const formattedContent = [
+      `-- Database Schema Export`,
+      `-- Generated at: ${timestamp}`,
+      `-- ----------------------------------------`,
+      '',
+      ...allSchemas,
+      ''
+    ].join('\n')
+    
+    // Write schemas to file
+    await fs.writeFile(exportPath, formattedContent, 'utf8')
+    
+    console.log('Schema exported successfully to:', exportPath)
+    res.json({ 
+      success: true, 
+      message: 'Schema exported successfully',
+      path: exportPath
+    })
+  } catch (error) {
+    console.error('Error exporting schema:', error)
     res.status(500).json({ error: error.message })
   }
 }) 

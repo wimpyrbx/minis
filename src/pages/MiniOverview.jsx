@@ -33,7 +33,8 @@ const MiniOverview = () => {
     types: [], // Array of type IDs
     proxy_types: [], // Array of type IDs for proxy uses
     tags: [], // Array of tag names (will be created if they don't exist)
-    product_sets: [] // Ensure this is initialized as an array
+    product_sets: [], // Ensure this is initialized as an array
+    painted_by: 'prepainted' // Add this line for default value
   })
 
   // Search and filter states
@@ -201,7 +202,8 @@ const MiniOverview = () => {
         types: [],
         proxy_types: [],
         tags: [],
-        product_sets: []
+        product_sets: [],
+        painted_by: 'prepainted' // Reset to default value
       })
       // Reset validation errors
       setValidationErrors({
@@ -300,17 +302,20 @@ const MiniOverview = () => {
   // Also update the handleAddType function to remove the type from proxy types if it exists
   const handleAddType = (type) => {
     if (!newMini.types.includes(type.id.toString())) {
-      // Remove from proxy types if it exists there
-      const updatedProxyTypes = newMini.proxy_types.filter(id => id !== type.id.toString())
-      const updatedSelectedProxyTypes = selectedProxyTypes.filter(t => t.id !== type.id)
-
+      // If this is the first type being added, clear proxy types
+      const shouldClearProxyTypes = newMini.types.length === 0
+      
       setNewMini({
         ...newMini,
         types: [...newMini.types, type.id.toString()],
-        proxy_types: updatedProxyTypes
+        // Clear proxy types if this is the first type
+        proxy_types: shouldClearProxyTypes ? [] : newMini.proxy_types
       })
       setSelectedTypes([...selectedTypes, type])
-      setSelectedProxyTypes(updatedSelectedProxyTypes)
+      // Clear selected proxy types if this is the first type
+      if (shouldClearProxyTypes) {
+        setSelectedProxyTypes([])
+      }
     }
     setTypeSearch('')
     setFilteredTypes([])
@@ -332,11 +337,26 @@ const MiniOverview = () => {
 
   // Add this function to remove a proxy type
   const handleRemoveProxyType = (typeId) => {
-    setNewMini({
+    console.log('=== REMOVING PROXY TYPE ===')
+    console.log('Before removal:', {
+      types: newMini.types.length,
+      proxyTypes: newMini.proxy_types.length
+    })
+
+    const updatedMini = {
       ...newMini,
       proxy_types: newMini.proxy_types.filter(id => id !== typeId.toString())
+    }
+
+    console.log('After removal:', {
+      types: updatedMini.types.length,
+      proxyTypes: updatedMini.proxy_types.length
     })
-    setSelectedProxyTypes(selectedProxyTypes.filter(type => type.id !== typeId))
+
+    setNewMini(updatedMini)
+    setSelectedProxyTypes(prev => 
+      prev.filter(type => type.id.toString() !== typeId.toString())
+    )
   }
 
   // Add these handlers
@@ -377,50 +397,99 @@ const MiniOverview = () => {
 
   const handleAddCategory = (category) => {
     if (!newMini.categories.includes(category.id.toString())) {
-      setNewMini({
+      const updatedMini = {
         ...newMini,
-        categories: [...newMini.categories, category.id.toString()]
-      })
+        categories: [...newMini.categories, category.id.toString()],
+        types: []
+      }
+
+      // Run cleanup after the update
+      setNewMini(cleanupDependencies(updatedMini))
+      
       setSelectedCategories([...selectedCategories, category])
+      setSelectedTypes([])
     }
     setCategorySearch('')
     setFilteredCategories([])
   }
 
   const handleRemoveCategory = (categoryId) => {
-    const updatedTypes = newMini.types.filter(typeId => {
-      const type = types.find(t => t.id.toString() === typeId)
-      return type && type.category_id.toString() !== categoryId.toString()
+    console.log('=== REMOVING CATEGORY ===', categoryId)
+    console.log('Before removal:', {
+      categories: newMini.categories.length,
+      types: newMini.types.length,
+      proxyTypes: newMini.proxy_types.length
     })
 
-    setNewMini({
-      ...newMini,
-      categories: newMini.categories.filter(id => id !== categoryId.toString()),
-      types: updatedTypes,
-      // Clear proxy types if no types remain
-      proxy_types: updatedTypes.length === 0 ? [] : newMini.proxy_types
+    setNewMini(prev => {
+      // Remove the category
+      const updatedCategories = prev.categories.filter(id => id !== categoryId.toString())
+      
+      // Remove types belonging to the removed category
+      const updatedTypes = prev.types.filter(typeId => {
+        const type = types.find(t => t.id.toString() === typeId)
+        return type && type.category_id.toString() !== categoryId.toString()
+      })
+
+      console.log('After filtering categories and types:', {
+        categories: updatedCategories.length,
+        types: updatedTypes.length,
+        proxyTypesBefore: prev.proxy_types.length
+      })
+
+      // **ONLY** clear proxy_types if no types remain
+      let updatedProxyTypes = prev.proxy_types
+      if (updatedTypes.length === 0) {
+        updatedProxyTypes = []
+        console.log('Clearing all proxy types as no types remain.')
+      }
+
+      console.log('Final proxy types after removal:', updatedProxyTypes.length)
+
+      return {
+        ...prev,
+        categories: updatedCategories,
+        types: updatedTypes,
+        proxy_types: updatedProxyTypes
+      }
     })
-    setSelectedCategories(selectedCategories.filter(cat => cat.id !== categoryId))
-    setSelectedTypes(selectedTypes.filter(type => 
-      type.category_id.toString() !== categoryId.toString()
-    ))
-    // Clear selectedProxyTypes if no types remain
-    if (updatedTypes.length === 0) {
-      setSelectedProxyTypes([])
-    }
+
+    setSelectedCategories(prev => 
+      prev.filter(cat => cat.id !== categoryId)
+    )
+
+    console.log('handleRemoveCategory completed.')
   }
 
   const handleRemoveType = (typeId) => {
+    console.log('=== REMOVING TYPE ===')
+    console.log('Before removal:', {
+      types: newMini.types.length,
+      proxyTypes: newMini.proxy_types.length
+    })
+
     const updatedTypes = newMini.types.filter(id => id !== typeId.toString())
-    setNewMini(prev => ({
-      ...prev,
+
+    const updatedMini = {
+      ...newMini,
       types: updatedTypes,
-      // If no types remain, clear proxy types
-      proxy_types: updatedTypes.length === 0 ? [] : prev.proxy_types
-    }))
-    setSelectedTypes(selectedTypes.filter(type => type.id !== typeId))
-    // Also clear selectedProxyTypes if no types remain
+      // **ONLY** clear proxy types if no types remain
+      proxy_types: updatedTypes.length === 0 ? [] : newMini.proxy_types
+    }
+
+    console.log('After removal:', {
+      types: updatedMini.types.length,
+      proxyTypes: updatedMini.proxy_types.length
+    })
+
+    setNewMini(updatedMini)
+    
+    setSelectedTypes(prev => 
+      prev.filter(type => type.id.toString() !== typeId.toString())
+    )
+
     if (updatedTypes.length === 0) {
+      console.log('No types remain - clearing proxy types')
       setSelectedProxyTypes([])
     }
   }
@@ -539,33 +608,9 @@ const MiniOverview = () => {
 
   // Update the handleEditMini function
   const handleEditMini = (mini) => {
-    // Get the related data arrays from the comma-separated strings
-    const editMini = {
-      ...mini,
-      categories: [], // Will be populated from the database
-      types: [],
-      proxy_types: [],
-      tags: mini.tag_names ? mini.tag_names.split(',').map(tag => tag.trim()).filter(Boolean) : [],
-      product_sets: []
-    }
-
-    // Fetch the complete mini data with all relationships
-    api.get(`/api/minis/${mini.id}/relationships`)
-      .then(response => {
-        const completeData = {
-          ...editMini,
-          ...response.data,
-          // Ensure tags are properly set from both sources
-          tags: response.data.tags || editMini.tags
-        }
-        setEditingMini(completeData)
-        setOriginalMini(completeData) // Store original data
-        setShowEditModal(true)
-      })
-      .catch(error => {
-        console.error('Error fetching mini relationships:', error)
-        setError(error.message)
-      })
+    setEditingMini(mini)
+    setPaintedBy(mini.painted_by || 'prepainted') // Set painted_by from existing mini or default to prepainted
+    setShowEditModal(true)
   }
 
   // Update the handleUpdateMini function
@@ -665,6 +710,22 @@ const MiniOverview = () => {
     } catch (error) {
       console.error('Error saving view type setting:', error)
     }
+  }
+
+  const handleCloseModal = () => {
+    setShowAddModal(false)
+    setPaintedBy('prepainted') // Reset to prepainted
+    // ... rest of your reset logic ...
+  }
+
+  // Add this cleanup function
+  const cleanupDependencies = (updatedMini) => {
+    // If we have no types at all, clear proxy types
+    if (!updatedMini.types || updatedMini.types.length === 0) {
+      updatedMini.proxy_types = []
+      setSelectedProxyTypes([])
+    }
+    return updatedMini
   }
 
   if (error) return <div>Error: {error}</div>
@@ -913,6 +974,42 @@ const MiniOverview = () => {
                         </Form.Group>
                       </Col>
                       <Col md={6}>
+                        <Form.Group className="mb-3">
+                          <Form.Label>Painted By</Form.Label>
+                          <div className="d-flex gap-3">
+                            <Form.Check
+                              type="radio"
+                              id="painted-prepainted"
+                              label="Pre-painted"
+                              name="paintedBy"
+                              value="prepainted"
+                              checked={newMini.painted_by === 'prepainted'}
+                              onChange={(e) => setNewMini({...newMini, painted_by: e.target.value})}
+                            />
+                            <Form.Check
+                              type="radio"
+                              id="painted-self"
+                              label="Self"
+                              name="paintedBy"
+                              value="self"
+                              checked={newMini.painted_by === 'self'}
+                              onChange={(e) => setNewMini({...newMini, painted_by: e.target.value})}
+                            />
+                            <Form.Check
+                              type="radio"
+                              id="painted-other"
+                              label="Other"
+                              name="paintedBy"
+                              value="other"
+                              checked={newMini.painted_by === 'other'}
+                              onChange={(e) => setNewMini({...newMini, painted_by: e.target.value})}
+                            />
+                          </div>
+                        </Form.Group>
+                      </Col>
+                    </Row>
+                    <Row className="mt-3">
+                      <Col md={6}>
                         <Form.Group>
                           <Form.Label>Location <span className="text-danger">*</span></Form.Label>
                           <Form.Control
@@ -929,9 +1026,7 @@ const MiniOverview = () => {
                           )}
                         </Form.Group>
                       </Col>
-                    </Row>
-                    <Row className="mt-3">
-                      <Col>
+                      <Col md={6}>
                         <Form.Group>
                           <Form.Label>Description</Form.Label>
                           <Form.Control
@@ -946,16 +1041,6 @@ const MiniOverview = () => {
                     </Row>
                   </Col>
                 </Row>
-
-                <Form.Group>
-                  <Form.Label>Quantity: {newMini.quantity}</Form.Label>
-                  <Form.Range
-                    min={1}
-                    max={100}
-                    value={newMini.quantity}
-                    onChange={(e) => setNewMini({...newMini, quantity: parseInt(e.target.value)})}
-                  />
-                </Form.Group>
               </Card.Body>
             </Card>
 
@@ -994,20 +1079,7 @@ const MiniOverview = () => {
                               key={category.id}
                               className="badge bg-primary me-1 mb-1"
                               style={{ cursor: 'pointer' }}
-                              onClick={() => {
-                                const updatedTypes = newMini.types.filter(id => id !== catId)
-                                setNewMini(prev => ({
-                                  ...prev,
-                                  types: updatedTypes,
-                                  // If no types remain, clear proxy types
-                                  proxy_types: updatedTypes.length === 0 ? [] : prev.proxy_types
-                                }))
-                                if (updatedTypes.length === 0) {
-                                  // Clear any selected proxy types from the UI
-                                  const proxyTypeElements = document.querySelectorAll('.proxy-type-badge')
-                                  proxyTypeElements.forEach(element => element.remove())
-                                }
-                              }}
+                              onClick={() => handleRemoveCategory(category.id)}
                             >
                               {category.name} ×
                             </span>
@@ -1052,13 +1124,15 @@ const MiniOverview = () => {
                                 setNewMini(prev => ({
                                   ...prev,
                                   types: updatedTypes,
-                                  // If no types remain, clear proxy types
+                                  // Always clear proxy types if no types remain
                                   proxy_types: updatedTypes.length === 0 ? [] : prev.proxy_types
                                 }))
+                                setSelectedTypes(prev => 
+                                  prev.filter(t => t.id !== type.id)
+                                )
+                                // Clear selectedProxyTypes if no types remain
                                 if (updatedTypes.length === 0) {
-                                  // Clear any selected proxy types from the UI
-                                  const proxyTypeElements = document.querySelectorAll('.proxy-type-badge')
-                                  proxyTypeElements.forEach(element => element.remove())
+                                  setSelectedProxyTypes([])
                                 }
                               }}
                             >
@@ -1101,18 +1175,14 @@ const MiniOverview = () => {
                               className="badge bg-primary me-1 mb-1"
                               style={{ cursor: 'pointer' }}
                               onClick={() => {
-                                const updatedTypes = newMini.types.filter(id => id !== typeId)
+                                // Remove the proxy type
                                 setNewMini(prev => ({
                                   ...prev,
-                                  types: updatedTypes,
-                                  // If no types remain, clear proxy types
-                                  proxy_types: updatedTypes.length === 0 ? [] : prev.proxy_types
+                                  proxy_types: prev.proxy_types.filter(id => id !== typeId)
                                 }))
-                                if (updatedTypes.length === 0) {
-                                  // Clear any selected proxy types from the UI
-                                  const proxyTypeElements = document.querySelectorAll('.proxy-type-badge')
-                                  proxyTypeElements.forEach(element => element.remove())
-                                }
+                                setSelectedProxyTypes(prev => 
+                                  prev.filter(t => t.id !== type.id)
+                                )
                               }}
                             >
                               {`${type.category_name}: ${type.name}`} ×
@@ -1371,20 +1441,7 @@ const MiniOverview = () => {
                               key={category.id}
                               className="badge bg-primary me-1 mb-1"
                               style={{ cursor: 'pointer' }}
-                              onClick={() => {
-                                const updatedTypes = editingMini.types.filter(id => id !== catId)
-                                setEditingMini(prev => ({
-                                  ...prev,
-                                  types: updatedTypes,
-                                  // If no types remain, clear proxy types
-                                  proxy_types: updatedTypes.length === 0 ? [] : prev.proxy_types
-                                }))
-                                if (updatedTypes.length === 0) {
-                                  // Clear any selected proxy types from the UI
-                                  const proxyTypeElements = document.querySelectorAll('.proxy-type-badge')
-                                  proxyTypeElements.forEach(element => element.remove())
-                                }
-                              }}
+                              onClick={() => handleRemoveCategory(category.id)}
                             >
                               {category.name} ×
                             </span>
@@ -1422,18 +1479,14 @@ const MiniOverview = () => {
                               className="badge bg-primary me-1 mb-1"
                               style={{ cursor: 'pointer' }}
                               onClick={() => {
-                                const updatedTypes = editingMini.types.filter(id => id !== typeId)
+                                // Remove the proxy type
                                 setEditingMini(prev => ({
                                   ...prev,
-                                  types: updatedTypes,
-                                  // If no types remain, clear proxy types
-                                  proxy_types: updatedTypes.length === 0 ? [] : prev.proxy_types
+                                  proxy_types: prev.proxy_types.filter(id => id !== typeId)
                                 }))
-                                if (updatedTypes.length === 0) {
-                                  // Clear any selected proxy types from the UI
-                                  const proxyTypeElements = document.querySelectorAll('.proxy-type-badge')
-                                  proxyTypeElements.forEach(element => element.remove())
-                                }
+                                setSelectedProxyTypes(prev => 
+                                  prev.filter(t => t.id !== type.id)
+                                )
                               }}
                             >
                               {`${type.category_name}: ${type.name}`} ×
@@ -1472,18 +1525,14 @@ const MiniOverview = () => {
                               className="badge bg-primary me-1 mb-1"
                               style={{ cursor: 'pointer' }}
                               onClick={() => {
-                                const updatedTypes = editingMini.types.filter(id => id !== typeId)
+                                // Remove the proxy type
                                 setEditingMini(prev => ({
                                   ...prev,
-                                  types: updatedTypes,
-                                  // If no types remain, clear proxy types
-                                  proxy_types: updatedTypes.length === 0 ? [] : prev.proxy_types
+                                  proxy_types: prev.proxy_types.filter(id => id !== typeId)
                                 }))
-                                if (updatedTypes.length === 0) {
-                                  // Clear any selected proxy types from the UI
-                                  const proxyTypeElements = document.querySelectorAll('.proxy-type-badge')
-                                  proxyTypeElements.forEach(element => element.remove())
-                                }
+                                setSelectedProxyTypes(prev => 
+                                  prev.filter(t => t.id !== type.id)
+                                )
                               }}
                             >
                               {`${type.category_name}: ${type.name}`} ×

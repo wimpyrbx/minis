@@ -183,15 +183,15 @@ const ProductAdmin = () => {
 
   // Add validation check functions
   const isValidManufacturer = (manufacturer) => {
-    return manufacturer.name.trim() !== ''
+    return manufacturer?.name?.trim() !== ''
   }
 
   const isValidProductLine = (line) => {
-    return line.name.trim() !== '' && line.company_id !== ''
+    return line?.name?.trim() !== '' && line?.company_id !== ''
   }
 
   const isValidProductSet = (set) => {
-    return set.name.trim() !== '' && set.product_line_id !== ''
+    return set?.name?.trim() !== '' && set?.product_line_id !== ''
   }
 
   const columns = [
@@ -228,6 +228,27 @@ const ProductAdmin = () => {
         return row[column.key];
     }
   };
+
+  const openProductSetModal = (set) => {
+    if (!set) return
+
+    // Find the product line first
+    const productLine = productLines.find(line => line.id === set.product_line_id)
+    
+    // Set both the product set and manufacturer
+    setEditingProductSet({ ...set })
+    if (productLine) {
+      setSelectedManufacturer(productLine.company_id.toString())
+    }
+    
+    setShowProductSetModal(true)
+  }
+
+  const handleCloseProductSetModal = () => {
+    setShowProductSetModal(false)
+    setEditingProductSet(null)
+    setSelectedManufacturer('')
+  }
 
   return (
     <Container fluid className="content">
@@ -402,10 +423,17 @@ const ProductAdmin = () => {
                       <Form.Label>Manufacturer</Form.Label>
                       <Form.Select
                         value={selectedManufacturer}
-                        onChange={(e) => setSelectedManufacturer(e.target.value)}
+                        onChange={(e) => {
+                          setSelectedManufacturer(e.target.value)
+                          // Clear product line selection when manufacturer changes
+                          setEditingProductSet(prev => ({
+                            ...prev,
+                            product_line_id: ''
+                          }))
+                        }}
                         required
                       >
-                        <option value="">-</option>
+                        <option value="">Select Manufacturer</option>
                         {manufacturers.map(manufacturer => (
                           <option key={manufacturer.id} value={manufacturer.id}>
                             {manufacturer.name}
@@ -464,8 +492,7 @@ const ProductAdmin = () => {
                             icon={faPencil}
                             variant="primary"
                             onClick={() => {
-                              setEditingProductSet(row);
-                              setShowProductSetModal(true);
+                              openProductSetModal(row);
                             }}
                             title="Edit Product Set"
                             className="me-2"
@@ -567,7 +594,7 @@ const ProductAdmin = () => {
         </Modal.Footer>
       </Modal>
 
-      <Modal show={showProductSetModal} onHide={() => setShowProductSetModal(false)}>
+      <Modal show={showProductSetModal} onHide={handleCloseProductSetModal}>
         <Modal.Header closeButton>
           <Modal.Title>Edit Product Set</Modal.Title>
         </Modal.Header>
@@ -589,7 +616,14 @@ const ProductAdmin = () => {
               <Form.Label>Manufacturer</Form.Label>
               <Form.Select
                 value={selectedManufacturer}
-                onChange={(e) => setSelectedManufacturer(e.target.value)}
+                onChange={(e) => {
+                  setSelectedManufacturer(e.target.value)
+                  // Clear product line selection when manufacturer changes
+                  setEditingProductSet(prev => ({
+                    ...prev,
+                    product_line_id: ''
+                  }))
+                }}
                 required
               >
                 <option value="">Select Manufacturer</option>
@@ -622,10 +656,14 @@ const ProductAdmin = () => {
           </Form>
         </Modal.Body>
         <Modal.Footer>
-          <Button variant="secondary" onClick={() => setShowProductSetModal(false)}>
+          <Button variant="secondary" onClick={handleCloseProductSetModal}>
             Cancel
           </Button>
-          <Button variant="primary" onClick={handleEditProductSet}>
+          <Button 
+            variant="primary" 
+            onClick={handleEditProductSet}
+            disabled={!isValidProductSet(editingProductSet)}
+          >
             Save Changes
           </Button>
         </Modal.Footer>
