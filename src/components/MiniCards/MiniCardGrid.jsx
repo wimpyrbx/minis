@@ -1,7 +1,7 @@
 import React from 'react'
 import { Row, Col } from 'react-bootstrap'
 import MiniCard from './MiniCard'
-import './styles.css'
+import './MiniCards.css'
 
 const MiniCardGrid = ({ minis, onEdit, onDelete, onImageClick }) => {
   return (

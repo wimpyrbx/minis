@@ -3,7 +3,7 @@ import MenuSection from './MenuSection.jsx'
 import MenuItem from './MenuItem.jsx'
 import { Form } from 'react-bootstrap'
 import { 
-  faTable,
+  faPhotoFilm,
   faBoxes,
   faCubes,
   faDatabase,
@@ -23,22 +23,22 @@ const Sidebar = () => {
         <h5 className="text-white mb-4 px-2">MINIS MANAGER</h5>
         
         <MenuSection title="MAIN">
-          <MenuItem icon={faTable} to="/overview">
+          <MenuItem icon={faPhotoFilm} to="/overview" color="info">
             Mini Overview
           </MenuItem>
-          <MenuItem icon={faBoxes} to="/product-admin">
+          <MenuItem icon={faBoxes} to="/product-admin" color="warning">
             Product Admin
           </MenuItem>
-          <MenuItem icon={faCubes} to="/minis-admin">
+          <MenuItem icon={faCubes} to="/minis-admin" color="success">
             Minis Admin
           </MenuItem>
         </MenuSection>
 
         <MenuSection title="SYSTEM">
-          <MenuItem icon={faDatabase} to="/database">
+          <MenuItem icon={faDatabase} to="/database" color="danger">
             Database
           </MenuItem>
-          <MenuItem icon={faCode} to="/manual-sql">
+          <MenuItem icon={faCode} to="/manual-sql" color="secondary">
             Manual SQL
           </MenuItem>
         </MenuSection>

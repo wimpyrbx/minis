@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { Container, Row, Col, Form, Button, Table, Alert, Card, Modal } from 'react-bootstrap'
-import { faBoxes, faTrash, faIndustry, faBoxArchive, faPencil } from '@fortawesome/free-solid-svg-icons'
+import { faBoxes, faTrash, faIndustry, faBoxArchive, faPencil, faPlus } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { api } from '../database/db'
 import TableButton from '../components/TableButton'
@@ -48,6 +48,21 @@ const ProductAdmin = () => {
       setNewProductSet(prev => ({ ...prev, product_line_id: '' }))
     }
   }, [selectedManufacturer, productLines])
+
+  useEffect(() => {
+    // Auto-select manufacturer if there's only one
+    if (manufacturers.length === 1) {
+      setNewProductLine(prev => ({ ...prev, company_id: manufacturers[0].id.toString() }))
+      setSelectedManufacturer(manufacturers[0].id.toString())
+    }
+  }, [manufacturers])
+
+  useEffect(() => {
+    // Auto-select product line if there's only one available
+    if (filteredProductLines.length === 1) {
+      setNewProductSet(prev => ({ ...prev, product_line_id: filteredProductLines[0].id.toString() }))
+    }
+  }, [filteredProductLines])
 
   const fetchData = async () => {
     try {
@@ -165,16 +180,29 @@ const ProductAdmin = () => {
     }
   }
 
+  // Add validation check functions
+  const isValidManufacturer = (manufacturer) => {
+    return manufacturer.name.trim() !== ''
+  }
+
+  const isValidProductLine = (line) => {
+    return line.name.trim() !== '' && line.company_id !== ''
+  }
+
+  const isValidProductSet = (set) => {
+    return set.name.trim() !== '' && set.product_line_id !== ''
+  }
+
   if (loading) return <div>Loading...</div>
 
   return (
     <Container fluid className="content">
       <Card className="mb-4">
         <Card.Body className="d-flex align-items-center">
-          <FontAwesomeIcon icon={faBoxes} className="text-primary me-3" size="2x" />
+          <FontAwesomeIcon icon={faBoxes} className="text-warning me-3" size="2x" />
           <div>
-            <h4 className="mb-0">Product Administration</h4>
-            <small className="text-muted">Manage manufacturers, product lines, and sets</small>
+            <h4 className="mb-0">Product Admin</h4>
+            <small className="text-muted">Manage manufacturers, product lines and sets</small>
           </div>
         </Card.Body>
       </Card>
@@ -192,8 +220,8 @@ const ProductAdmin = () => {
               </div>
 
               <Form onSubmit={handleAddManufacturer} className="mb-4">
-                <Row>
-                  <Col md={9}>
+                <Row className="align-items-end">
+                  <Col>
                     <Form.Group className="mb-3">
                       <Form.Label>Name</Form.Label>
                       <Form.Control
@@ -204,8 +232,9 @@ const ProductAdmin = () => {
                       />
                     </Form.Group>
                   </Col>
-                  <Col md={3} className="d-flex align-items-end">
-                    <Button type="submit" variant="primary" className="mb-3 w-100">
+                  <Col xs="auto">
+                    <Button type="submit" variant="light" className="mb-3 border" disabled={!isValidManufacturer(newManufacturer)}>
+                      <FontAwesomeIcon icon={faPlus} className="me-2 text-success" />
                       Add
                     </Button>
                   </Col>
@@ -214,37 +243,38 @@ const ProductAdmin = () => {
 
               <Table hover>
                 <thead>
-                  <tr>
+                    <tr>
                     <th>Name</th>
-                    <th width="100"></th>
-                  </tr>
+                    <th className="w-1 whitespace-nowrap"></th>
+                    </tr>
                 </thead>
                 <tbody>
-                  {manufacturers.map(manufacturer => (
+                    {manufacturers.map(manufacturer => (
                     <tr key={manufacturer.id}>
-                      <td>{manufacturer.name}</td>
-                      <td className="text-nowrap">
-                        <TableButton
-                          icon={faPencil}
-                          variant="primary"
-                          onClick={() => {
-                            setEditingManufacturer(manufacturer)
-                            setShowManufacturerModal(true)
-                          }}
-                          title="Edit Company"
-                          className="me-2"
-                        />
-                        <TableButton
-                          icon={faTrash}
-                          variant="danger"
-                          onClick={() => handleDeleteManufacturer(manufacturer.id)}
-                          title="Delete Company"
-                        />
-                      </td>
+                        <td>{manufacturer.name}</td>
+                        <td className="whitespace-nowrap">
+                        <div className="flex gap-2">
+                            <TableButton
+                            icon={faPencil}
+                            variant="primary"
+                            onClick={() => {
+                                setEditingManufacturer(manufacturer)
+                                setShowManufacturerModal(true)
+                            }}
+                            title="Edit Company"
+                            />
+                            <TableButton
+                            icon={faTrash}
+                            variant="danger"
+                            onClick={() => handleDeleteManufacturer(manufacturer.id)}
+                            title="Delete Company"
+                            />
+                        </div>
+                        </td>
                     </tr>
-                  ))}
+                    ))}
                 </tbody>
-              </Table>
+                </Table>
             </Card.Body>
           </Card>
         </Col>
@@ -259,8 +289,8 @@ const ProductAdmin = () => {
               </div>
 
               <Form onSubmit={handleAddProductLine} className="mb-4">
-                <Row>
-                  <Col md={5}>
+                <Row className="align-items-end">
+                  <Col>
                     <Form.Group className="mb-3">
                       <Form.Label>Name</Form.Label>
                       <Form.Control
@@ -271,7 +301,7 @@ const ProductAdmin = () => {
                       />
                     </Form.Group>
                   </Col>
-                  <Col md={4}>
+                  <Col>
                     <Form.Group className="mb-3">
                       <Form.Label>Manufacturer</Form.Label>
                       <Form.Select
@@ -279,7 +309,7 @@ const ProductAdmin = () => {
                         onChange={(e) => setNewProductLine({...newProductLine, company_id: e.target.value})}
                         required
                       >
-                        <option value="">Select</option>
+                        <option value="">-</option>
                         {manufacturers.map(manufacturer => (
                           <option key={manufacturer.id} value={manufacturer.id}>
                             {manufacturer.name}
@@ -288,20 +318,21 @@ const ProductAdmin = () => {
                       </Form.Select>
                     </Form.Group>
                   </Col>
-                  <Col md={3} className="d-flex align-items-end">
-                    <Button type="submit" variant="primary" className="mb-3 w-100">
+                  <Col xs="auto">
+                    <Button type="submit" variant="light" className="mb-3 border" disabled={!isValidProductLine(newProductLine)}>
+                      <FontAwesomeIcon icon={faPlus} className="me-2 text-success" />
                       Add
                     </Button>
                   </Col>
                 </Row>
               </Form>
 
-              <Table hover>
+              <Table hover className="table-with-actions">
                 <thead>
                   <tr>
                     <th>Name</th>
                     <th>Manufacturer</th>
-                    <th width="100"></th>
+                    <th width="10"></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -345,8 +376,8 @@ const ProductAdmin = () => {
               </div>
 
               <Form onSubmit={handleAddProductSet} className="mb-4">
-                <Row>
-                  <Col md={3}>
+                <Row className="align-items-end">
+                  <Col>
                     <Form.Group className="mb-3">
                       <Form.Label>Name</Form.Label>
                       <Form.Control
@@ -357,7 +388,7 @@ const ProductAdmin = () => {
                       />
                     </Form.Group>
                   </Col>
-                  <Col md={3}>
+                  <Col>
                     <Form.Group className="mb-3">
                       <Form.Label>Manufacturer</Form.Label>
                       <Form.Select
@@ -365,7 +396,7 @@ const ProductAdmin = () => {
                         onChange={(e) => setSelectedManufacturer(e.target.value)}
                         required
                       >
-                        <option value="">Select Manufacturer</option>
+                        <option value="">-</option>
                         {manufacturers.map(manufacturer => (
                           <option key={manufacturer.id} value={manufacturer.id}>
                             {manufacturer.name}
@@ -374,7 +405,7 @@ const ProductAdmin = () => {
                       </Form.Select>
                     </Form.Group>
                   </Col>
-                  <Col md={3}>
+                  <Col>
                     <Form.Group className="mb-3">
                       <Form.Label>Product Line</Form.Label>
                       <Form.Select
@@ -383,7 +414,7 @@ const ProductAdmin = () => {
                         required
                         disabled={!selectedManufacturer}
                       >
-                        <option value="">Select Product Line</option>
+                        <option value="">-</option>
                         {filteredProductLines.map(line => (
                           <option key={line.id} value={line.id}>
                             {line.name}
@@ -392,15 +423,16 @@ const ProductAdmin = () => {
                       </Form.Select>
                     </Form.Group>
                   </Col>
-                  <Col md={3} className="d-flex align-items-end">
-                    <Button type="submit" variant="primary" className="mb-3 w-100">
+                  <Col xs="auto">
+                    <Button type="submit" variant="light" className="mb-3 border" disabled={!isValidProductSet(newProductSet)}>
+                      <FontAwesomeIcon icon={faPlus} className="me-2 text-success" />
                       Add
                     </Button>
                   </Col>
                 </Row>
               </Form>
 
-              <Table hover>
+              <Table hover className="table-with-actions">
                 <thead>
                   <tr>
                     <th>Name</th>

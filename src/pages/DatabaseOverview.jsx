@@ -63,7 +63,7 @@ const DatabaseOverview = () => {
     <Container fluid className="content">
       <Card className="mb-4">
         <Card.Body className="d-flex align-items-center">
-          <FontAwesomeIcon icon={faDatabase} className="text-primary me-3" size="2x" />
+          <FontAwesomeIcon icon={faDatabase} className="text-info me-2" />
           <div>
             <h4 className="mb-0">Database Overview</h4>
             <small className="text-muted">View database structure and contents</small>

@@ -10,4 +10,222 @@ select:disabled,
 select:disabled,
 .form-select:disabled {
   background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23999' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e") !important;
+}
+
+/* Add these custom button styles */
+.btn-light {
+  background-color: #ffffff;
+  border-color: #dee2e6;
+  color: #198754 !important;
+}
+
+.btn-light:hover {
+  background-color: #f8f9fa;
+  border-color: #198754;
+  color: #198754 !important;
+}
+
+.btn-light:active {
+  background-color: #e9ecef !important;
+  border-color: #198754 !important;
+}
+
+.btn-outline-light {
+  color: #212529;
+  border-color: #dee2e6;
+}
+
+.btn-outline-light:hover {
+  background-color: #f8f9fa;
+  border-color: #cbd3da;
+  color: #212529;
+}
+
+/* Add custom colors for icons */
+.text-info { color: #0dcaf0 !important; }
+.text-warning { color: #ffc107 !important; }
+.text-success { color: #198754 !important; }
+.text-danger { color: #dc3545 !important; }
+.text-secondary { color: #6c757d !important; }
+
+/* Add these new global styles */
+
+/* Light button style */
+.btn-light {
+  background-color: #ffffff;
+  border-color: #dee2e6;
+  color: #198754 !important;
+}
+
+.btn-light:hover {
+  background-color: #f8f9fa;
+  border-color: #198754;
+  color: #198754 !important;
+}
+
+.btn-light:active {
+  background-color: #e9ecef !important;
+  border-color: #198754 !important;
+}
+
+/* Nav pills style */
+.nav-pills .nav-link {
+  color: #6c757d;
+}
+
+.nav-pills .nav-link:hover {
+  color: #198754;
+  background-color: rgba(25, 135, 84, 0.1);
+}
+
+.nav-pills .nav-link.active {
+  background-color: #198754 !important;
+  color: white !important;
+}
+
+/* Add button style */
+.btn-add {
+  background-color: #ffffff;
+  border-color: #dee2e6;
+  color: #198754;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.btn-add:hover {
+  background-color: #f8f9fa;
+  border-color: #198754;
+  color: #198754;
+}
+
+.btn-add .fa-plus {
+  color: #198754;
+}
+
+/* Card header buttons */
+.card-header .btn {
+  background-color: #ffffff;
+  border-color: #dee2e6;
+  color: #198754;
+}
+
+.card-header .btn:hover {
+  background-color: #f8f9fa;
+  border-color: #198754;
+  color: #198754;
+}
+
+/* Form submit buttons */
+.form-submit {
+  background-color: #198754;
+  border-color: #198754;
+  color: white;
+}
+
+.form-submit:hover {
+  background-color: #157347;
+  border-color: #157347;
+}
+
+/* Disabled states */
+.btn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+/* Update/add these button styles */
+.btn-primary {
+  background-color: #ffffff !important;
+  border-color: #dee2e6 !important;
+  color: #198754 !important;
+}
+
+.btn-primary:hover {
+  background-color: #f8f9fa !important;
+  border-color: #198754 !important;
+}
+
+.btn-primary:active {
+  background-color: #e9ecef !important;
+  border-color: #198754 !important;
+}
+
+/* Add styles for form submit buttons */
+.btn[type="submit"] {
+  background-color: #ffffff !important;
+  border-color: #dee2e6 !important;
+  color: #198754 !important;
+}
+
+.btn[type="submit"]:hover {
+  background-color: #f8f9fa !important;
+  border-color: #198754 !important;
+}
+
+/* Update table action columns */
+.action-column {
+  width: auto !important;  /* Allow the column to adjust based on content */
+  white-space: nowrap;
+  padding-left: 4px !important;
+  padding-right: 4px !important;
+}
+
+.action-column-content {
+  display: flex;
+  gap: 0.25rem;
+  justify-content: flex-end;  /* Ensure buttons are aligned to the right */
+  min-width: max-content;     /* Ensure content doesn't wrap */
+}
+
+/* Ensure table respects column widths */
+.table {
+  table-layout: auto;  /* Allow table to adjust based on content */
+}
+
+/* Add this for tables that need action columns */
+.table-with-actions {
+  table-layout: auto !important;
+}
+
+/* Add these styles for disabled select placeholders */
+select:disabled,
+.form-select:disabled {
+  background-color: #e9ecef !important;
+  opacity: 0.65;
+  cursor: not-allowed;
+  color: #6c757d !important; /* Match Bootstrap's text-muted color */
+}
+
+/* Override the required state color when disabled */
+select:disabled:required,
+.form-select:disabled:required {
+  color: #6c757d !important;
+}
+
+/* Style for the disabled dropdown arrow */
+select:disabled,
+.form-select:disabled {
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23999' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e") !important;
+}
+
+/* Add styles for placeholder option in disabled select */
+select:disabled option,
+.form-select:disabled option {
+  color: #6c757d;
+}
+
+/* Update the disabled state styles */
+[data-bs-theme="dark"] .form-control:disabled,
+[data-bs-theme="dark"] .form-select:disabled {
+  background-color: #2b3035 !important;  /* Bootstrap dark theme input background */
+  border-color: #373b3e !important;      /* Bootstrap dark theme border */
+  color: #6c757d !important;             /* Bootstrap muted text color */
+  opacity: 0.65;
+}
+
+/* Override the required state color when disabled in dark theme */
+[data-bs-theme="dark"] select:disabled:required,
+[data-bs-theme="dark"] .form-select:disabled:required {
+  color: #6c757d !important;
 } 

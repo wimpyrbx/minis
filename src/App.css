@@ -195,7 +195,6 @@ pre code {
 [data-bs-theme="dark"] .form-select:disabled {
   background-color: #1a1d21;
   border-color: #2b2f36;
-  color: #943838;
   opacity: 0.8;
 }
 

@@ -14,11 +14,13 @@ const TableButton = ({
     switch (variant) {
       case 'danger':
         return 'text-danger'
+      case 'success':
+        return 'text-success'
       case 'info':
         return 'text-info'
       case 'primary':
       default:
-        return 'text-orange'
+        return 'text-primary'
     }
   }
 

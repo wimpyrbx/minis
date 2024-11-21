@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { Container, Table, Form, Button, Card, Modal, Row, Col } from 'react-bootstrap'
-import { faTable, faPlus, faImage, faPencil, faTrash, faLayerGroup, faCube, faExchangeAlt, faTags, faBox, faList, faTableCells } from '@fortawesome/free-solid-svg-icons'
+import { faPhotoFilm, faPlus, faImage, faPencil, faTrash, faLayerGroup, faCube, faExchangeAlt, faTags, faBox, faList, faTableCells } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { api } from '../database/db'
 import SearchableSelect from '../components/SearchableSelect'
@@ -674,7 +674,7 @@ const MiniOverview = () => {
     <Container fluid className="content">
       <Card className="mb-4">
         <Card.Body className="d-flex align-items-center">
-          <FontAwesomeIcon icon={faTable} className="text-primary me-3" size="2x" />
+          <FontAwesomeIcon icon={faPhotoFilm} className="text-info me-3" size="2x" />
           <div>
             <h4 className="mb-0">Mini Overview</h4>
             <small className="text-muted">View and manage your miniature collection</small>
@@ -701,36 +701,40 @@ const MiniOverview = () => {
             </div>
             <div className="btn-group me-4">  {/* Added margin to the right */}
               <Button 
-                variant={viewType === 'table' ? 'primary' : 'outline-primary'}
+                variant={viewType === 'table' ? 'light' : 'outline-light'}
                 onClick={() => handleViewTypeChange('table')}
                 title="Table View"
+                className="border"
               >
-                <FontAwesomeIcon icon={faList} />
+                <FontAwesomeIcon icon={faList} className="text-secondary" />
               </Button>
               <Button 
-                variant={viewType === 'cards' ? 'primary' : 'outline-primary'}
+                variant={viewType === 'cards' ? 'light' : 'outline-light'}
                 onClick={() => handleViewTypeChange('cards')}
                 title="Card View"
+                className="border"
               >
-                <FontAwesomeIcon icon={faTableCells} />
+                <FontAwesomeIcon icon={faTableCells} className="text-secondary" />
               </Button>
             </div>
           </div>
           <Button 
-            variant="primary" 
+            variant="light" 
             onClick={() => setShowAddModal(true)} 
-            style={{ whiteSpace: 'nowrap' }}  // Prevent text wrapping
+            style={{ whiteSpace: 'nowrap' }}
+            className="border"
           >
-            <FontAwesomeIcon icon={faPlus} className="me-2" />
+            <FontAwesomeIcon icon={faPlus} className="me-2 text-success" />
             Add New Mini
           </Button>
         </div>
 
         {/* Conditional rendering based on view type */}
         {viewType === 'table' ? (
-          <Table hover responsive>
+          <Table hover responsive className="table-with-actions">
             <thead>
               <tr>
+                <th style={{ width: '50px' }}></th>
                 <th>Name</th>
                 <th>Location</th>
                 <th>Categories</th>
@@ -739,13 +743,13 @@ const MiniOverview = () => {
                 <th>Product Sets</th>
                 <th>Tags</th>
                 <th>Quantity</th>
-                <th>Actions</th>
+                <th className="action-column"></th>
               </tr>
             </thead>
             <tbody>
               {paginatedMinis.map(mini => (
                 <tr key={mini.id}>
-                  <td className="d-flex align-items-center" style={{ height: '40px' }}>
+                  <td className="text-center">
                     {mini.image_path && (
                       <img 
                         src={mini.image_path} 
@@ -754,13 +758,14 @@ const MiniOverview = () => {
                           width: '40px', 
                           height: '40px', 
                           objectFit: 'contain',
-                          marginRight: '10px',
                           cursor: 'pointer'
                         }}
                         onClick={() => handleImageClick(mini)}
                         title="Click to view full image"
                       />
                     )}
+                  </td>
+                  <td>
                     <a 
                       href={`https://www.miniscollector.com/minis/gallery?title=${encodeURIComponent(mini.name)}`}
                       target="_blank"
@@ -777,28 +782,28 @@ const MiniOverview = () => {
                   <td>{mini.product_set_names?.split(',').join(', ')}</td>
                   <td>{mini.tag_names?.split(',').join(', ')}</td>
                   <td>{mini.quantity}</td>
-                  <td className="text-nowrap">
-                    <TableButton
-                      icon={faImage}
-                      variant="info"
-                      onClick={() => handleImageClick(mini)}
-                      title="View Image"
-                      className="me-1"
-                      disabled={!mini.image_path}
-                    />
-                    <TableButton
-                      icon={faPencil}
-                      variant="primary"
-                      onClick={() => handleEditMini(mini)}
-                      title="Edit Mini"
-                      className="me-1"
-                    />
-                    <TableButton
-                      icon={faTrash}
-                      variant="danger"
-                      onClick={() => handleDeleteMini(mini.id)}
-                      title="Delete Mini"
-                    />
+                  <td className="action-column">
+                    <div className="action-column-content">
+                      <TableButton
+                        icon={faImage}
+                        variant="info"
+                        onClick={() => handleImageClick(mini)}
+                        title="View Image"
+                        disabled={!mini.image_path}
+                      />
+                      <TableButton
+                        icon={faPencil}
+                        variant="primary"
+                        onClick={() => handleEditMini(mini)}
+                        title="Edit Mini"
+                      />
+                      <TableButton
+                        icon={faTrash}
+                        variant="danger"
+                        onClick={() => handleDeleteMini(mini.id)}
+                        title="Delete Mini"
+                      />
+                    </div>
                   </td>
                 </tr>
               ))}

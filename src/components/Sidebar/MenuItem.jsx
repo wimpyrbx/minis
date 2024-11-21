@@ -3,7 +3,7 @@ import { NavLink } from 'react-router-dom'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import PropTypes from 'prop-types'
 
-const MenuItem = ({ icon, to, children }) => {
+const MenuItem = ({ icon, to, children, color = 'primary' }) => {
   return (
     <NavLink 
       to={to} 
@@ -11,7 +11,7 @@ const MenuItem = ({ icon, to, children }) => {
         `nav-link ${isActive ? 'active' : ''}`
       }
     >
-      <FontAwesomeIcon icon={icon} className="me-2" fixedWidth />
+      <FontAwesomeIcon icon={icon} className={`me-2 text-${color}`} fixedWidth />
       {children}
     </NavLink>
   )

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { Container, Row, Col, Form, Button, Table, Alert, Card, Modal } from 'react-bootstrap'
-import { faCubes, faTrash, faLayerGroup, faCube, faPencil } from '@fortawesome/free-solid-svg-icons'
+import { faCubes, faTrash, faLayerGroup, faCube, faPencil, faPlus } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { api } from '../database/db'
 import TableButton from '../components/TableButton'
@@ -118,15 +118,32 @@ const MinisAdmin = () => {
     setShowTypeModal(true)
   }
 
+  // Add useEffect for auto-selection
+  useEffect(() => {
+    // Auto-select category if there's only one
+    if (categories.length === 1) {
+      setNewType(prev => ({ ...prev, category_id: categories[0].id.toString() }))
+    }
+  }, [categories])
+
+  // Add validation check functions
+  const isValidCategory = (category) => {
+    return category.name.trim() !== ''
+  }
+
+  const isValidType = (type) => {
+    return type.name.trim() !== '' && type.category_id !== ''
+  }
+
   if (loading) return <div>Loading...</div>
 
   return (
     <Container fluid className="content">
       <Card className="mb-4">
         <Card.Body className="d-flex align-items-center">
-          <FontAwesomeIcon icon={faCubes} className="text-primary me-3" size="2x" />
+          <FontAwesomeIcon icon={faCubes} className="text-success me-3" size="2x" />
           <div>
-            <h4 className="mb-0">Minis Administration</h4>
+            <h4 className="mb-0">Minis Admin</h4>
             <small className="text-muted">Manage categories and types</small>
           </div>
         </Card.Body>
@@ -140,13 +157,13 @@ const MinisAdmin = () => {
           <Card className="mb-4">
             <Card.Body>
               <div className="d-flex align-items-center mb-4">
-                <FontAwesomeIcon icon={faLayerGroup} className="text-primary me-2" />
+                <FontAwesomeIcon icon={faLayerGroup} className="text-success me-2" />
                 <h5 className="mb-0">Categories</h5>
               </div>
 
               <Form onSubmit={handleAddCategory} className="mb-4">
-                <Row>
-                  <Col md={5}>
+                <Row className="align-items-end">
+                  <Col>
                     <Form.Group className="mb-3">
                       <Form.Label>Name</Form.Label>
                       <Form.Control
@@ -157,7 +174,7 @@ const MinisAdmin = () => {
                       />
                     </Form.Group>
                   </Col>
-                  <Col md={5}>
+                  <Col>
                     <Form.Group className="mb-3">
                       <Form.Label>Image Path</Form.Label>
                       <Form.Control
@@ -167,20 +184,26 @@ const MinisAdmin = () => {
                       />
                     </Form.Group>
                   </Col>
-                  <Col md={2} className="d-flex align-items-end">
-                    <Button type="submit" variant="primary" className="mb-3 w-100">
+                  <Col xs="auto">
+                    <Button 
+                      type="submit" 
+                      variant="light" 
+                      className="mb-3 border"
+                      disabled={!isValidCategory(newCategory)}
+                    >
+                      <FontAwesomeIcon icon={faPlus} className="me-2 text-success" />
                       Add
                     </Button>
                   </Col>
                 </Row>
               </Form>
 
-              <Table hover>
+              <Table hover className="table-with-actions">
                 <thead>
                   <tr>
                     <th>Name</th>
                     <th>Image Path</th>
-                    <th width="100"></th>
+                    <th className="action-column"></th>
                   </tr>
                 </thead>
                 <tbody>
@@ -188,20 +211,21 @@ const MinisAdmin = () => {
                     <tr key={category.id}>
                       <td>{category.name}</td>
                       <td>{category.image_path}</td>
-                      <td className="text-nowrap">
-                        <TableButton
-                          icon={faPencil}
-                          variant="primary"
-                          onClick={() => openCategoryModal(category)}
-                          title="Edit Category"
-                          className="me-2"
-                        />
-                        <TableButton
-                          icon={faTrash}
-                          variant="danger"
-                          onClick={() => handleDeleteCategory(category.id)}
-                          title="Delete Category"
-                        />
+                      <td className="action-column">
+                        <div className="action-column-content">
+                          <TableButton
+                            icon={faPencil}
+                            variant="primary"
+                            onClick={() => openCategoryModal(category)}
+                            title="Edit Category"
+                          />
+                          <TableButton
+                            icon={faTrash}
+                            variant="danger"
+                            onClick={() => handleDeleteCategory(category.id)}
+                            title="Delete Category"
+                          />
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -216,13 +240,13 @@ const MinisAdmin = () => {
           <Card className="mb-4">
             <Card.Body>
               <div className="d-flex align-items-center mb-4">
-                <FontAwesomeIcon icon={faCube} className="text-primary me-2" />
+                <FontAwesomeIcon icon={faCube} className="text-success me-2" />
                 <h5 className="mb-0">Types</h5>
               </div>
 
               <Form onSubmit={handleAddType} className="mb-4">
-                <Row>
-                  <Col md={4}>
+                <Row className="align-items-end">
+                  <Col>
                     <Form.Group className="mb-3">
                       <Form.Label>Name</Form.Label>
                       <Form.Control
@@ -233,7 +257,7 @@ const MinisAdmin = () => {
                       />
                     </Form.Group>
                   </Col>
-                  <Col md={3}>
+                  <Col>
                     <Form.Group className="mb-3">
                       <Form.Label>Category</Form.Label>
                       <Form.Select
@@ -241,7 +265,7 @@ const MinisAdmin = () => {
                         onChange={(e) => setNewType({...newType, category_id: e.target.value})}
                         required
                       >
-                        <option value="">Select Category</option>
+                        <option value="">-</option>
                         {categories.map(category => (
                           <option key={category.id} value={category.id}>
                             {category.name}
@@ -250,7 +274,7 @@ const MinisAdmin = () => {
                       </Form.Select>
                     </Form.Group>
                   </Col>
-                  <Col md={3}>
+                  <Col>
                     <Form.Group className="mb-3">
                       <Form.Label>Image Path</Form.Label>
                       <Form.Control
@@ -260,15 +284,21 @@ const MinisAdmin = () => {
                       />
                     </Form.Group>
                   </Col>
-                  <Col md={2} className="d-flex align-items-end">
-                    <Button type="submit" variant="primary" className="mb-3 w-100">
+                  <Col xs="auto">
+                    <Button 
+                      type="submit" 
+                      variant="light" 
+                      className="mb-3 border"
+                      disabled={!isValidType(newType)}
+                    >
+                      <FontAwesomeIcon icon={faPlus} className="me-2 text-success" />
                       Add
                     </Button>
                   </Col>
                 </Row>
               </Form>
 
-              <Table hover>
+              <Table hover className="table-with-actions">
                 <thead>
                   <tr>
                     <th>Name</th>
@@ -378,7 +408,7 @@ const MinisAdmin = () => {
                 })}
                 required
               >
-                <option value="">Select Category</option>
+                <option value="">-</option>
                 {categories.map(category => (
                   <option key={category.id} value={category.id}>
                     {category.name}
