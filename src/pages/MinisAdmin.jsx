@@ -124,10 +124,14 @@ const MinisAdmin = () => {
   const handleDeleteType = async (id) => {
     if (window.confirm('Are you sure?')) {
       try {
-        await api.delete(`/api/types/${id}`)
+        const response = await api.delete(`/api/types/${id}`)
         fetchData()
       } catch (err) {
-        setError(err.message)
+        if (err.response?.status === 409) {
+          setError("Cannot delete this type because it's being used by one or more minis. Please remove it from all minis first.")
+        } else {
+          setError(err.response?.data?.error || err.message)
+        }
       }
     }
   }

@@ -141,6 +141,12 @@ const MiniOverviewAdd = ({ show, handleClose, categories, types, tags, productSe
         formData.append('image', newMini.image_path)
       }
 
+      console.log('Sending data to add mini:', {
+        formData: Object.fromEntries(formData.entries()),
+        miniData,
+        newMini
+      })
+
       const response = await api.post('/api/minis', formData, {
         headers: {
           'Content-Type': 'multipart/form-data'
@@ -356,7 +362,7 @@ const MiniOverviewAdd = ({ show, handleClose, categories, types, tags, productSe
                           <Form.Check
                             type="radio"
                             id="painted-prepainted"
-                            label="Pre-painted"
+                            label="Prepainted"
                             name="paintedBy"
                             value="prepainted"
                             checked={newMini.painted_by === 'prepainted'}
@@ -415,6 +421,15 @@ const MiniOverviewAdd = ({ show, handleClose, categories, types, tags, productSe
                       </Form.Group>
                     </Col>
                   </Row>
+                  <Form.Group className="mt-3">
+                    <Form.Label>Quantity: {newMini.quantity}</Form.Label>
+                    <Form.Range
+                      min={1}
+                      max={100}
+                      value={newMini.quantity}
+                      onChange={(e) => setNewMini(prev => ({ ...prev, quantity: parseInt(e.target.value) }))}
+                    />
+                  </Form.Group>
                 </Col>
               </Row>
             </Card.Body>

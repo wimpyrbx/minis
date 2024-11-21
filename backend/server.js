@@ -669,7 +669,7 @@ app.post('/api/minis', upload.none(), async (req, res) => {
     const {
       name, description, location, image_path,
       quantity, categories, types, proxy_types, 
-      tags, tag_ids, product_sets
+      tags, tag_ids, product_sets, painted_by
     } = req.body
 
     // Parse JSON strings if they're strings
@@ -697,13 +697,14 @@ app.post('/api/minis', upload.none(), async (req, res) => {
     const result = await db.run(
       `INSERT INTO minis (
         name, description, location,
-        quantity, created_at, updated_at
-      ) VALUES (?, ?, ?, ?, datetime('now'), datetime('now'))`,
+        quantity, painted_by, created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, datetime('now'), datetime('now'))`,
       [
         name?.trim(),
         description?.trim() || null,
         location?.trim(),
-        quantity || 1
+        quantity || 1,
+        painted_by || 'prepainted'
       ]
     )
 
@@ -881,14 +882,45 @@ app.delete('/api/minis/:id', async (req, res) => {
   try {
     const miniId = req.params.id
     
-    // Delete the images first
+    await db.run('BEGIN TRANSACTION')
+
+    // Delete all related records first
+    await Promise.all([
+      // Delete mini-to-category relationships
+      db.run('DELETE FROM mini_to_categories WHERE mini_id = ?', miniId),
+      // Delete mini-to-type relationships
+      db.run('DELETE FROM mini_to_types WHERE mini_id = ?', miniId),
+      // Delete mini-to-proxy-type relationships
+      db.run('DELETE FROM mini_to_proxy_types WHERE mini_id = ?', miniId),
+      // Delete mini-to-tag relationships
+      db.run('DELETE FROM mini_to_tags WHERE mini_id = ?', miniId),
+      // Delete mini-to-product-set relationships
+      db.run('DELETE FROM mini_to_product_sets WHERE mini_id = ?', miniId)
+    ])
+
+    // Clean up unused tags
+    await db.run(`
+      DELETE FROM tags 
+      WHERE id NOT IN (
+        SELECT DISTINCT tag_id 
+        FROM mini_to_tags
+      )
+    `)
+    
+    // Delete the images
     await deleteImages(miniId)
     
-    // Then delete the database record
+    // Finally delete the mini record itself
     await db.run('DELETE FROM minis WHERE id = ?', miniId)
+    
+    // Commit the transaction
+    await db.run('COMMIT')
     
     res.status(204).send()
   } catch (error) {
+    // Rollback on error
+    await db.run('ROLLBACK')
+    console.error('Error deleting mini:', error)
     res.status(500).json({ error: error.message })
   }
 })
@@ -902,7 +934,7 @@ app.put('/api/minis/:id', async (req, res) => {
     const {
       name, description, location, image_path,
       quantity, categories, types, proxy_types, 
-      tags, product_sets
+      tags, product_sets, painted_by
     } = req.body
 
     // Process new image if provided
@@ -919,7 +951,7 @@ app.put('/api/minis/:id', async (req, res) => {
         name = ?, description = ?, location = ?, 
         image_path = COALESCE(?, image_path),
         original_image_path = COALESCE(?, original_image_path),
-        quantity = ?, updated_at = datetime('now')
+        quantity = ?, painted_by = ?, updated_at = datetime('now')
       WHERE id = ?`,
       [
         name.trim(),
@@ -928,6 +960,7 @@ app.put('/api/minis/:id', async (req, res) => {
         imagePaths?.thumbnail,
         imagePaths?.original,
         quantity || 1,
+        painted_by || 'prepainted',
         miniId
       ]
     )

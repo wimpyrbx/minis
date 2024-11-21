@@ -184,7 +184,10 @@ const MiniOverviewEdit = ({ show, handleClose, categories, types, tags, productS
         product_sets: editingMini.product_sets
       }
 
-      console.log('Sending update with data:', miniToUpdate)
+      console.log('Sending data to update mini:', {
+        miniToUpdate,
+        editingMini
+      })
 
       const response = await api.put(`/api/minis/${mini.id}`, miniToUpdate)
       const updatedMini = {
