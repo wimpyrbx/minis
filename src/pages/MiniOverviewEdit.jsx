@@ -7,7 +7,7 @@ import SearchableSelect from '../components/SearchableSelect'
 import TagInput from '../components/TagInput'
 import '../styles/ImageModal.css'
 
-const MiniOverviewEdit = ({ show, handleClose, categories, types, tags, productSets, mini, setMinis, minis }) => {
+const MiniOverviewEdit = ({ show, handleClose, categories, types, tags, productSets, mini, setMinis, minis, baseSizes }) => {
   // Form state for editing mini
   const [editingMini, setEditingMini] = useState({
     id: '',
@@ -16,6 +16,7 @@ const MiniOverviewEdit = ({ show, handleClose, categories, types, tags, productS
     location: '',
     image_path: '',
     quantity: 1,
+    base_size_id: '3',
     categories: [],
     types: [],
     proxy_types: [],
@@ -34,33 +35,32 @@ const MiniOverviewEdit = ({ show, handleClose, categories, types, tags, productS
 
   // Add effect to handle modal open/close
   useEffect(() => {
-    if (show) {
-      if (mini) {
-        console.log('Initializing edit modal with mini:', mini)
-        
-        // Split tag names into array if they exist
-        const tagNames = mini.tag_names ? mini.tag_names.split(',').map(tag => tag.trim()) : []
-        
-        const newEditingMini = {
-          id: mini.id,
-          name: mini.name || '',
-          description: mini.description || '',
-          location: mini.location || '',
-          image_path: mini.image_path || '',
-          quantity: mini.quantity || 1,
-          categories: mini.category_ids || [],
-          types: mini.type_ids || [],
-          proxy_types: mini.proxy_type_ids || [],
-          tags: tagNames, // Use tag names instead of IDs
-          product_sets: mini.product_set_ids || [],
-          painted_by: mini.painted_by || 'prepainted'
-        }
-
-        console.log('Setting editingMini:', newEditingMini)
-        setEditingMini(newEditingMini)
+    if (show && mini) {
+      console.log('Initializing edit modal with mini:', mini)
+      
+      // Split tag names into array if they exist
+      const tagNames = mini.tag_names ? mini.tag_names.split(',').map(tag => tag.trim()) : []
+      
+      const newEditingMini = {
+        id: mini.id,
+        name: mini.name || '',
+        description: mini.description || '',
+        location: mini.location || '',
+        image_path: mini.image_path || '',
+        quantity: mini.quantity || 1,
+        base_size_id: mini.base_size_id || '3',
+        categories: mini.category_ids || [],
+        types: mini.type_ids || [],
+        proxy_types: mini.proxy_type_ids || [],
+        tags: tagNames,
+        product_sets: mini.product_set_ids || [],
+        painted_by: mini.painted_by || 'prepainted'
       }
+
+      console.log('Setting editingMini:', newEditingMini)
+      setEditingMini(newEditingMini)
     } else {
-      // Modal is being closed - reset state
+      // Reset state when modal closes
       setEditingMini({
         id: '',
         name: '',
@@ -68,6 +68,7 @@ const MiniOverviewEdit = ({ show, handleClose, categories, types, tags, productS
         location: '',
         image_path: '',
         quantity: 1,
+        base_size_id: '3',
         categories: [],
         types: [],
         proxy_types: [],
@@ -406,15 +407,32 @@ const MiniOverviewEdit = ({ show, handleClose, categories, types, tags, productS
                 </Col>
               </Row>
 
-              <Form.Group className="mt-3">
-                <Form.Label>Quantity: {editingMini.quantity}</Form.Label>
-                <Form.Range
-                  min={1}
-                  max={100}
-                  value={editingMini.quantity}
-                  onChange={(e) => setEditingMini(prev => ({ ...prev, quantity: parseInt(e.target.value) }))}
-                />
-              </Form.Group>
+              <Row>
+                <Col md={6}>
+                  <Form.Group className="mt-3">
+                    <Form.Label>Quantity: {editingMini.quantity}</Form.Label>
+                    <Form.Range
+                      min={1}
+                      max={100}
+                      value={editingMini.quantity}
+                      onChange={(e) => setEditingMini(prev => ({ ...prev, quantity: parseInt(e.target.value) }))}
+                    />
+                  </Form.Group>
+                </Col>
+                <Col md={6}>
+                  <Form.Group className="mt-3">
+                    <Form.Label>
+                      {baseSizes.find(b => b.id.toString() === editingMini.base_size_id)?.base_size_name}
+                    </Form.Label>
+                    <Form.Range
+                      min={1}
+                      max={baseSizes.length}
+                      value={editingMini.base_size_id}
+                      onChange={(e) => setEditingMini(prev => ({ ...prev, base_size_id: e.target.value }))}
+                    />
+                  </Form.Group>
+                </Col>
+              </Row>
             </Card.Body>
           </Card>
 

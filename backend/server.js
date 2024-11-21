@@ -93,6 +93,44 @@ app.get('/api/database/:table', async (req, res) => {
         WHERE type='table' AND name=?
       `, [table])
       records = await db.all('SELECT settings_id, setting_name, setting_value FROM settings')
+    } else if (table === 'base_sizes') {
+      // Special handling for base_sizes table
+      schema = await db.get(`
+        SELECT sql 
+        FROM sqlite_master 
+        WHERE type='table' AND name=?
+      `, [table])
+      records = await db.all('SELECT * FROM base_sizes ORDER BY id')
+    } else if (table === 'painted_by_values') {
+      // Special handling to show painted_by possible values
+      schema = {
+        sql: `CREATE TABLE painted_by_values (
+    value TEXT PRIMARY KEY,
+    description TEXT
+) -- Virtual table to show painted_by constraints`
+      }
+      records = [
+        { value: 'prepainted', description: 'Pre-painted mini' },
+        { value: 'self', description: 'Self-painted mini' },
+        { value: 'other', description: 'Painted by someone else' }
+      ]
+    } else if (table === 'mini_to_painted_by') {
+      // Special handling to show painted_by relationships
+      schema = {
+        sql: `CREATE TABLE mini_to_painted_by (
+    mini_id INTEGER,
+    painted_by TEXT,
+    FOREIGN KEY (mini_id) REFERENCES minis(id),
+    CHECK (painted_by IN ('prepainted', 'self', 'other'))
+) -- Virtual table to show painted_by relationships`
+      }
+      // Get actual painted_by values from minis table
+      records = await db.all(`
+        SELECT id as mini_id, painted_by 
+        FROM minis 
+        ORDER BY id DESC 
+        LIMIT 10
+      `)
     } else {
       // Get table schema for regular tables
       schema = await db.get(`
@@ -109,6 +147,7 @@ app.get('/api/database/:table', async (req, res) => {
           case 'mini_to_product_sets':
           case 'mini_to_tags':
           case 'mini_to_proxy_types':
+          case 'mini_to_base_sizes':
             return 'mini_id'
           case 'mini_types':
             return 'category_id'
@@ -116,6 +155,8 @@ app.get('/api/database/:table', async (req, res) => {
             return 'company_id'
           case 'product_sets':
             return 'product_line_id'
+          case 'base_sizes':
+            return 'id'
           default:
             return 'id'
         }
@@ -598,6 +639,33 @@ app.delete('/api/product-sets/:id', async (req, res) => {
   }
 })
 
+// Add endpoint to get mini image URLs
+app.get('/api/minis/:id/images', async (req, res) => {
+  try {
+    const miniId = req.params.id
+    const idStr = miniId.toString()
+    const dir1 = idStr.length > 0 ? idStr[0] : '0'
+    const dir2 = idStr.length > 1 ? idStr[1] : '0'
+
+    // Check if images exist
+    const thumbnailPath = path.join(__dirname, '..', 'public', 'images', 'minis', 'thumbs', dir1, dir2, `${miniId}.webp`)
+    const originalPath = path.join(__dirname, '..', 'public', 'images', 'minis', 'originals', dir1, dir2, `${miniId}.webp`)
+
+    const thumbnailExists = fsSync.existsSync(thumbnailPath)
+    const originalExists = fsSync.existsSync(originalPath)
+
+    // Construct public URLs
+    const urls = {
+      thumbnail: thumbnailExists ? `/images/minis/thumbs/${dir1}/${dir2}/${miniId}.webp` : null,
+      original: originalExists ? `/images/minis/originals/${dir1}/${dir2}/${miniId}.webp` : null
+    }
+
+    res.json(urls)
+  } catch (error) {
+    res.status(500).json({ error: error.message })
+  }
+})
+
 // Update the processAndSaveImage function
 async function processAndSaveImage(imageData, miniId) {
   // Remove data:image/xyz;base64, prefix
@@ -606,18 +674,18 @@ async function processAndSaveImage(imageData, miniId) {
 
   // Create directory paths based on ID
   const idStr = miniId.toString()
-  const dir1 = idStr.length > 2 ? idStr.slice(0, 1) : '0'
-  const dir2 = idStr.length > 1 ? idStr.slice(1, 2) : '0'
+  const dir1 = idStr.length > 0 ? idStr[0] : '0'
+  const dir2 = idStr.length > 1 ? idStr[1] : '0'
   
-  // Paths for thumbnails - use path.join with parent directory
-  const thumbDirPath = path.join(__dirname, '..', 'public', 'images', 'minis', dir1, dir2)
-  await fs.mkdir(thumbDirPath, { recursive: true })
+  // Paths for thumbnails
+  const thumbDirPath = path.join(__dirname, '..', 'public', 'images', 'minis', 'thumbs', dir1, dir2)
+  await mkdirp(thumbDirPath)
   const thumbnailPath = path.join(thumbDirPath, `${miniId}.webp`)
-  const publicThumbPath = `/images/minis/${dir1}/${dir2}/${miniId}.webp`
+  const publicThumbPath = `/images/minis/thumbs/${dir1}/${dir2}/${miniId}.webp`
 
-  // Paths for originals - use path.join with parent directory
+  // Paths for originals
   const originalDirPath = path.join(__dirname, '..', 'public', 'images', 'minis', 'originals', dir1, dir2)
-  await fs.mkdir(originalDirPath, { recursive: true })
+  await mkdirp(originalDirPath)
   const originalPath = path.join(originalDirPath, `${miniId}.webp`)
   const publicOriginalPath = `/images/minis/originals/${dir1}/${dir2}/${miniId}.webp`
 
@@ -627,7 +695,7 @@ async function processAndSaveImage(imageData, miniId) {
     .webp({ quality: 80 })
     .toFile(thumbnailPath)
 
-  // Process and save original (convert to webp but maintain original size)
+  // Process and save original
   await sharp(imageBuffer)
     .webp({ quality: 90 })
     .toFile(originalPath)
@@ -642,11 +710,10 @@ async function processAndSaveImage(imageData, miniId) {
 async function deleteImages(miniId) {
   try {
     const idStr = miniId.toString()
-    const dir1 = idStr.length > 2 ? idStr.slice(0, 1) : '0'
-    const dir2 = idStr.length > 1 ? idStr.slice(1, 2) : '0'
+    const dir1 = idStr.length > 0 ? idStr[0] : '0'
+    const dir2 = idStr.length > 1 ? idStr[1] : '0'
 
-    // Paths for both thumbnail and original - use path.join with parent directory
-    const thumbnailPath = path.join(__dirname, '..', 'public', 'images', 'minis', dir1, dir2, `${miniId}.webp`)
+    const thumbnailPath = path.join(__dirname, '..', 'public', 'images', 'minis', 'thumbs', dir1, dir2, `${miniId}.webp`)
     const originalPath = path.join(__dirname, '..', 'public', 'images', 'minis', 'originals', dir1, dir2, `${miniId}.webp`)
 
     // Delete both files if they exist
@@ -654,6 +721,26 @@ async function deleteImages(miniId) {
       fs.unlink(thumbnailPath).catch(() => {}),  // Ignore error if file doesn't exist
       fs.unlink(originalPath).catch(() => {})
     ])
+
+    // Try to remove empty directories
+    try {
+      const thumbDir = path.join(__dirname, '..', 'public', 'images', 'minis', 'thumbs', dir1, dir2)
+      const originalDir = path.join(__dirname, '..', 'public', 'images', 'minis', 'originals', dir1, dir2)
+      
+      // Only remove if directory is empty
+      const thumbFiles = await fs.readdir(thumbDir)
+      if (thumbFiles.length === 0) {
+        await fs.rmdir(thumbDir)
+      }
+      
+      const originalFiles = await fs.readdir(originalDir)
+      if (originalFiles.length === 0) {
+        await fs.rmdir(originalDir)
+      }
+    } catch (err) {
+      // Ignore directory removal errors
+      console.log('Note: Could not remove empty directories:', err.message)
+    }
   } catch (error) {
     console.error(`Error deleting images for mini ${miniId}:`, error)
   }
@@ -669,7 +756,8 @@ app.post('/api/minis', upload.none(), async (req, res) => {
     const {
       name, description, location, image_path,
       quantity, categories, types, proxy_types, 
-      tags, tag_ids, product_sets, painted_by
+      tags, tag_ids, product_sets, painted_by,
+      base_size_id
     } = req.body
 
     // Parse JSON strings if they're strings
@@ -710,6 +798,14 @@ app.post('/api/minis', upload.none(), async (req, res) => {
 
     const miniId = result.lastID
     console.log('Created mini with ID:', miniId)
+
+    // Add base size relationship
+    if (base_size_id) {
+      await db.run(
+        'INSERT INTO mini_to_base_sizes (mini_id, base_size_id) VALUES (?, ?)',
+        [miniId, base_size_id]
+      )
+    }
 
     // Process image if provided
     if (image_path) {
@@ -1253,6 +1349,16 @@ app.post('/api/export-schema', async (req, res) => {
     })
   } catch (error) {
     console.error('Error exporting schema:', error)
+    res.status(500).json({ error: error.message })
+  }
+}) 
+
+// Add GET endpoint for base sizes
+app.get('/api/base-sizes', async (req, res) => {
+  try {
+    const baseSizes = await db.all('SELECT * FROM base_sizes ORDER BY id')
+    res.json(baseSizes)
+  } catch (error) {
     res.status(500).json({ error: error.message })
   }
 }) 

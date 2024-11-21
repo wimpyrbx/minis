@@ -7,7 +7,7 @@ import SearchableSelect from '../components/SearchableSelect'
 import TagInput from '../components/TagInput'
 import '../styles/ImageModal.css'
 
-const MiniOverviewAdd = ({ show, handleClose, categories, types, tags, productSets, setMinis, minis }) => {
+const MiniOverviewAdd = ({ show, handleClose, categories, types, tags, productSets, setMinis, minis, baseSizes }) => {
   // Form state for new mini
   const [newMini, setNewMini] = useState({
     name: '',
@@ -15,6 +15,7 @@ const MiniOverviewAdd = ({ show, handleClose, categories, types, tags, productSe
     location: '',
     image_path: '',
     quantity: 1,
+    base_size_id: '3',
     categories: [], // Array of category IDs
     types: [], // Array of type IDs
     proxy_types: [], // Array of type IDs for proxy uses
@@ -195,6 +196,7 @@ const MiniOverviewAdd = ({ show, handleClose, categories, types, tags, productSe
       location: '',
       image_path: '',
       quantity: 1,
+      base_size_id: '3',
       categories: [],
       types: [],
       proxy_types: [],
@@ -421,15 +423,32 @@ const MiniOverviewAdd = ({ show, handleClose, categories, types, tags, productSe
                       </Form.Group>
                     </Col>
                   </Row>
-                  <Form.Group className="mt-3">
-                    <Form.Label>Quantity: {newMini.quantity}</Form.Label>
-                    <Form.Range
-                      min={1}
-                      max={100}
-                      value={newMini.quantity}
-                      onChange={(e) => setNewMini(prev => ({ ...prev, quantity: parseInt(e.target.value) }))}
-                    />
-                  </Form.Group>
+                  <Row>
+                    <Col md={6}>
+                      <Form.Group className="mt-3">
+                        <Form.Label>Quantity: {newMini.quantity}</Form.Label>
+                        <Form.Range
+                          min={1}
+                          max={100}
+                          value={newMini.quantity}
+                          onChange={(e) => setNewMini(prev => ({ ...prev, quantity: parseInt(e.target.value) }))}
+                        />
+                      </Form.Group>
+                    </Col>
+                    <Col md={6}>
+                      <Form.Group className="mt-3">
+                        <Form.Label>
+                          {baseSizes.find(b => b.id.toString() === newMini.base_size_id)?.base_size_name}
+                        </Form.Label>
+                        <Form.Range
+                          min={1}
+                          max={baseSizes.length}
+                          value={newMini.base_size_id}
+                          onChange={(e) => setNewMini(prev => ({ ...prev, base_size_id: e.target.value }))}
+                        />
+                      </Form.Group>
+                    </Col>
+                  </Row>
                 </Col>
               </Row>
             </Card.Body>

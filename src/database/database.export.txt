@@ -1,7 +1,15 @@
 -- Database Schema Export
--- Generated at: 2024-11-21T20:53:02.680Z
+-- Generated at: 2024-11-21T21:17:29.349Z
 -- ----------------------------------------
 
+
+CREATE TABLE "base_sizes"  (
+    
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    
+    base_size_name TEXT NOT NULL
+
+)
 
 CREATE TABLE mini_categories  (
     
@@ -15,6 +23,31 @@ CREATE TABLE mini_categories  (
     name
 )
       
+)
+
+CREATE TABLE mini_to_base_sizes  (
+    
+    mini_id INTEGER NOT NULL,
+    
+    base_size_id INTEGER NOT NULL,
+    
+    FOREIGN KEY  (
+    mini_id
+) REFERENCES minis (
+    id
+) ON DELETE CASCADE,
+    
+    FOREIGN KEY  (
+    base_size_id
+) REFERENCES "base_sizes" (
+    id
+) ON DELETE CASCADE,
+    
+    PRIMARY KEY  (
+    mini_id,
+     base_size_id
+)
+
 )
 
 CREATE TABLE mini_to_categories  (
@@ -38,6 +71,31 @@ CREATE TABLE mini_to_categories  (
     PRIMARY KEY  (
     mini_id,
      category_id
+)
+
+)
+
+CREATE TABLE mini_to_painted_by  (
+    
+    mini_id INTEGER NOT NULL,
+    
+    painted_by_id INTEGER NOT NULL,
+    
+    FOREIGN KEY  (
+    mini_id
+) REFERENCES minis (
+    id
+) ON DELETE CASCADE,
+    
+    FOREIGN KEY  (
+    painted_by_id
+) REFERENCES painted_by (
+    id
+) ON DELETE CASCADE,
+    
+    PRIMARY KEY  (
+    mini_id,
+     painted_by_id
 )
 
 )
@@ -175,8 +233,6 @@ CREATE TABLE minis  (
     
     location TEXT NOT NULL,
       -- Now required
-    image_path TEXT,
-    
     quantity INTEGER DEFAULT 1 CHECK  (
     quantity >= 0
 ),
@@ -193,26 +249,22 @@ CREATE TABLE minis  (
 )
 )
 ,
-     original_image_path TEXT,
-     painted_by TEXT NOT NULL DEFAULT 'prepainted' CHECK  (
-    painted_by IN  (
-    'prepainted',
-     'self',
-     'other'
-)
+     base_size_id INTEGER NOT NULL DEFAULT 3  -- 3 assuming 'medium' is id 3
+    REFERENCES "base_sizes" (
+    id
 ),
-     base_size TEXT NOT NULL DEFAULT 'medium' CHECK  (
-    base_size IN  (
-    'tiny',
-     'small',
-     'medium',
-     'large',
-     'huge',
-     'gargantuan',
-     'colossal',
-     'colossal+'
+     painted_by_id INTEGER NOT NULL DEFAULT 1  -- 1 assuming 'prepainted' is id 1
+    REFERENCES painted_by (
+    id
 )
 )
+
+CREATE TABLE painted_by  (
+    
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    
+    painted_by_name TEXT NOT NULL
+
 )
 
 CREATE TABLE product_lines  (

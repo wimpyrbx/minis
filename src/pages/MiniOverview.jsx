@@ -25,6 +25,7 @@ const MiniOverview = () => {
   const [minis, setMinis] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [baseSizes, setBaseSizes] = useState([])
 
   // Modal visibility states
   const [showAddModal, setShowAddModal] = useState(false)
@@ -46,12 +47,13 @@ const MiniOverview = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [categoriesRes, typesRes, tagsRes, productSetsRes, minisRes, settingsRes] = await Promise.all([
+        const [categoriesRes, typesRes, tagsRes, productSetsRes, minisRes, baseSizesRes, settingsRes] = await Promise.all([
           api.get('/api/categories'),
           api.get('/api/types'),
           api.get('/api/tags'),
           api.get('/api/product-sets'),
           api.get('/api/minis'),
+          api.get('/api/base-sizes'),
           api.get('/api/settings')
         ])
 
@@ -60,6 +62,7 @@ const MiniOverview = () => {
         setTags(tagsRes.data)
         setProductSets(productSetsRes.data)
         setMinis(minisRes.data)
+        setBaseSizes(baseSizesRes.data)
 
         if (settingsRes.data.collection_viewtype) {
           setViewType(settingsRes.data.collection_viewtype)
@@ -395,6 +398,7 @@ const MiniOverview = () => {
         productSets={productSets}
         setMinis={setMinis}
         minis={minis}
+        baseSizes={baseSizes}
       />
 
       {/* Edit Mini Modal */}
@@ -409,6 +413,7 @@ const MiniOverview = () => {
           mini={editingMini}
           setMinis={setMinis}
           minis={minis}
+          baseSizes={baseSizes}
         />
       )}
 
