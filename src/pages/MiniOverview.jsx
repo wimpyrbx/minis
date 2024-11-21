@@ -219,7 +219,7 @@ const MiniOverview = () => {
         <div className="d-flex justify-content-between align-items-center mb-4">
           <div className="d-flex align-items-center">
             <div className="d-flex align-items-center me-4" style={{ whiteSpace: 'nowrap' }}>
-              <span className="me-2">Show</span>
+              <span className="me-2">Show</span>a
               <Form.Select 
                 size="sm" 
                 style={{ width: '65px' }}  

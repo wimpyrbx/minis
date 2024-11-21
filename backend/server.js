@@ -114,23 +114,6 @@ app.get('/api/database/:table', async (req, res) => {
         { value: 'self', description: 'Self-painted mini' },
         { value: 'other', description: 'Painted by someone else' }
       ]
-    } else if (table === 'mini_to_painted_by') {
-      // Special handling to show painted_by relationships
-      schema = {
-        sql: `CREATE TABLE mini_to_painted_by (
-    mini_id INTEGER,
-    painted_by TEXT,
-    FOREIGN KEY (mini_id) REFERENCES minis(id),
-    CHECK (painted_by IN ('prepainted', 'self', 'other'))
-) -- Virtual table to show painted_by relationships`
-      }
-      // Get actual painted_by values from minis table
-      records = await db.all(`
-        SELECT id as mini_id, painted_by 
-        FROM minis 
-        ORDER BY id DESC 
-        LIMIT 10
-      `)
     } else {
       // Get table schema for regular tables
       schema = await db.get(`
@@ -144,10 +127,10 @@ app.get('/api/database/:table', async (req, res) => {
         switch (table) {
           case 'mini_to_categories':
           case 'mini_to_types':
-          case 'mini_to_product_sets':
+            return 'mini_id'
           case 'mini_to_tags':
+            return 'mini_id'
           case 'mini_to_proxy_types':
-          case 'mini_to_base_sizes':
             return 'mini_id'
           case 'mini_types':
             return 'category_id'
@@ -432,40 +415,7 @@ app.put('/api/manufacturers/:id', async (req, res) => {
 })
 
 app.delete('/api/manufacturers/:id', async (req, res) => {
-  try {
-    // Check if manufacturer has product lines
-    const hasLines = await db.get(`
-      SELECT COUNT(*) as count 
-      FROM product_lines 
-      WHERE company_id = ?
-    `, req.params.id)
-
-    if (hasLines.count > 0) {
-      return res.status(409).json({ 
-        error: 'Cannot delete manufacturer as it contains one or more product lines' 
-      })
-    }
-
-    // Check if any product sets from this manufacturer are in use
-    const inUse = await db.get(`
-      SELECT COUNT(*) as count 
-      FROM mini_to_product_sets mps
-      JOIN product_sets ps ON mps.set_id = ps.id
-      JOIN product_lines pl ON ps.product_line_id = pl.id
-      WHERE pl.company_id = ?
-    `, req.params.id)
-
-    if (inUse.count > 0) {
-      return res.status(409).json({ 
-        error: 'Cannot delete manufacturer as it contains product lines with sets being used by one or more minis' 
-      })
-    }
-
-    await db.run('DELETE FROM production_companies WHERE id = ?', req.params.id)
-    res.status(204).send()
-  } catch (error) {
-    res.status(500).json({ error: error.message })
-  }
+    // Check if manufacturer is in use <- needs to be created due to changes in database
 })
 
 // Product Lines endpoints
@@ -525,39 +475,7 @@ app.put('/api/product-lines/:id', async (req, res) => {
 })
 
 app.delete('/api/product-lines/:id', async (req, res) => {
-  try {
-    // Check if product line has sets
-    const hasSets = await db.get(`
-      SELECT COUNT(*) as count 
-      FROM product_sets 
-      WHERE product_line_id = ?
-    `, req.params.id)
-
-    if (hasSets.count > 0) {
-      return res.status(409).json({ 
-        error: 'Cannot delete product line as it contains one or more product sets' 
-      })
-    }
-
-    // Check if any product sets in this line are in use
-    const inUse = await db.get(`
-      SELECT COUNT(*) as count 
-      FROM mini_to_product_sets mps
-      JOIN product_sets ps ON mps.set_id = ps.id
-      WHERE ps.product_line_id = ?
-    `, req.params.id)
-
-    if (inUse.count > 0) {
-      return res.status(409).json({ 
-        error: 'Cannot delete product line as it contains sets being used by one or more minis' 
-      })
-    }
-
-    await db.run('DELETE FROM product_lines WHERE id = ?', req.params.id)
-    res.status(204).send()
-  } catch (error) {
-    res.status(500).json({ error: error.message })
-  }
+    // Check if manufacturer is in use <- needs to be created due to changes in database
 })
 
 // Product Sets endpoints
@@ -597,46 +515,7 @@ app.post('/api/product-sets', async (req, res) => {
 })
 
 app.put('/api/product-sets/:id', async (req, res) => {
-  try {
-    const { id } = req.params
-    const { name, product_line_id } = req.body
-    await db.run(
-      'UPDATE product_sets SET name = ?, product_line_id = ? WHERE id = ?',
-      [name, product_line_id, id]
-    )
-    const updatedProductSet = await db.get(
-      `SELECT ps.*, pl.name as product_line_name
-       FROM product_sets ps
-       JOIN product_lines pl ON ps.product_line_id = pl.id
-       WHERE ps.id = ?`, 
-      id
-    )
-    res.json(updatedProductSet)
-  } catch (error) {
-    res.status(500).json({ error: error.message })
-  }
-})
-
-app.delete('/api/product-sets/:id', async (req, res) => {
-  try {
-    // Check if product set is in use
-    const inUse = await db.get(`
-      SELECT COUNT(*) as count 
-      FROM mini_to_product_sets 
-      WHERE set_id = ?
-    `, req.params.id)
-
-    if (inUse.count > 0) {
-      return res.status(409).json({ 
-        error: 'Cannot delete product set as it is being used by one or more minis' 
-      })
-    }
-
-    await db.run('DELETE FROM product_sets WHERE id = ?', req.params.id)
-    res.status(204).send()
-  } catch (error) {
-    res.status(500).json({ error: error.message })
-  }
+    // Check if manufacturer is in use <- needs to be created due to changes in database
 })
 
 // Add endpoint to get mini image URLs
@@ -746,18 +625,16 @@ async function deleteImages(miniId) {
   }
 }
 
-// Modify the POST endpoint for minis
+// Update the POST endpoint for minis
 app.post('/api/minis', upload.none(), async (req, res) => {
   try {
-    console.log('Received request body:', req.body)
     await db.run('BEGIN TRANSACTION')
     
-    // Parse JSON strings back to arrays
     const {
       name, description, location, image_path,
       quantity, categories, types, proxy_types, 
-      tags, tag_ids, product_sets, painted_by,
-      base_size_id
+      tags, painted_by, base_size_id,
+      product_sets
     } = req.body
 
     // Parse JSON strings if they're strings
@@ -766,45 +643,55 @@ app.post('/api/minis', upload.none(), async (req, res) => {
     const parsedProxyTypes = typeof proxy_types === 'string' ? JSON.parse(proxy_types) : proxy_types
     const parsedProductSets = typeof product_sets === 'string' ? JSON.parse(product_sets) : product_sets
     const parsedTags = typeof tags === 'string' ? JSON.parse(tags) : tags
-    const parsedTagIds = typeof tag_ids === 'string' ? JSON.parse(tag_ids) : tag_ids
 
-    console.log('Parsed data:', {
-      name,
-      description,
-      location,
-      quantity,
-      categories: parsedCategories,
-      types: parsedTypes,
-      proxy_types: parsedProxyTypes,
-      tags: parsedTags,
-      tag_ids: parsedTagIds,
-      product_sets: parsedProductSets
-    })
+    // Use the first product set ID if available
+    const product_set_id = parsedProductSets?.length > 0 ? parsedProductSets[0] : null
 
-    // Insert the main mini record first to get the ID
+    console.log('Inserting mini with base_size_id:', base_size_id)
+
+    // Insert the main mini record
     const result = await db.run(
       `INSERT INTO minis (
         name, description, location,
-        quantity, painted_by, created_at, updated_at
-      ) VALUES (?, ?, ?, ?, ?, datetime('now'), datetime('now'))`,
+        quantity, painted_by_id, base_size_id, product_set_id,
+        created_at, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, datetime('now'), datetime('now'))`,
       [
         name?.trim(),
         description?.trim() || null,
         location?.trim(),
         quantity || 1,
-        painted_by || 'prepainted'
+        painted_by,
+        base_size_id,  // This should now be properly passed through
+        product_set_id
       ]
     )
 
     const miniId = result.lastID
-    console.log('Created mini with ID:', miniId)
 
-    // Add base size relationship
-    if (base_size_id) {
-      await db.run(
-        'INSERT INTO mini_to_base_sizes (mini_id, base_size_id) VALUES (?, ?)',
-        [miniId, base_size_id]
-      )
+    // Handle tags
+    if (parsedTags?.length > 0) {
+      console.log('Processing tags:', parsedTags)
+      for (const tagName of parsedTags) {
+        // First try to find existing tag
+        let tagResult = await db.get('SELECT id FROM tags WHERE name = ?', tagName.trim())
+        
+        if (!tagResult) {
+          // Create new tag if it doesn't exist
+          console.log('Creating new tag:', tagName)
+          const newTag = await db.run(
+            'INSERT INTO tags (name) VALUES (?)',
+            [tagName.trim()]
+          )
+          tagResult = { id: newTag.lastID }
+        }
+
+        // Create mini-to-tag relationship
+        await db.run(
+          'INSERT INTO mini_to_tags (mini_id, tag_id) VALUES (?, ?)',
+          [miniId, tagResult.id]
+        )
+      }
     }
 
     // Process image if provided
@@ -821,10 +708,16 @@ app.post('/api/minis', upload.none(), async (req, res) => {
     if (parsedCategories?.length > 0) {
       console.log('Inserting categories:', parsedCategories)
       for (const categoryId of parsedCategories) {
-        await db.run(
-          'INSERT INTO mini_to_categories (mini_id, category_id) VALUES (?, ?)',
+        const exists = await db.get(
+          'SELECT 1 FROM mini_to_categories WHERE mini_id = ? AND category_id = ?',
           [miniId, categoryId]
         )
+        if (!exists) {
+          await db.run(
+            'INSERT INTO mini_to_categories (mini_id, category_id) VALUES (?, ?)',
+            [miniId, categoryId]
+          )
+        }
       }
     }
 
@@ -832,10 +725,16 @@ app.post('/api/minis', upload.none(), async (req, res) => {
     if (parsedTypes?.length > 0) {
       console.log('Inserting types:', parsedTypes)
       for (const typeId of parsedTypes) {
-        await db.run(
-          'INSERT INTO mini_to_types (mini_id, type_id) VALUES (?, ?)',
+        const exists = await db.get(
+          'SELECT 1 FROM mini_to_types WHERE mini_id = ? AND type_id = ?',
           [miniId, typeId]
         )
+        if (!exists) {
+          await db.run(
+            'INSERT INTO mini_to_types (mini_id, type_id) VALUES (?, ?)',
+            [miniId, typeId]
+          )
+        }
       }
     }
 
@@ -843,45 +742,16 @@ app.post('/api/minis', upload.none(), async (req, res) => {
     if (parsedProxyTypes?.length > 0) {
       console.log('Inserting proxy types:', parsedProxyTypes)
       for (const typeId of parsedProxyTypes) {
-        await db.run(
-          'INSERT INTO mini_to_proxy_types (mini_id, type_id) VALUES (?, ?)',
+        const exists = await db.get(
+          'SELECT 1 FROM mini_to_proxy_types WHERE mini_id = ? AND type_id = ?',
           [miniId, typeId]
         )
-      }
-    }
-
-    // Insert tags
-    if (parsedTags?.length > 0) {
-      console.log('Processing tags:', parsedTags)
-      for (const tagName of parsedTags) {
-        // Try to get existing tag
-        console.log('Looking up tag:', tagName)
-        let tagResult = await db.get('SELECT id FROM tags WHERE name = ?', tagName)
-        
-        // Create tag if it doesn't exist
-        if (!tagResult) {
-          console.log('Creating new tag:', tagName)
-          const newTag = await db.run('INSERT INTO tags (name) VALUES (?)', tagName)
-          tagResult = { id: newTag.lastID }
+        if (!exists) {
+          await db.run(
+            'INSERT INTO mini_to_proxy_types (mini_id, type_id) VALUES (?, ?)',
+            [miniId, typeId]
+          )
         }
-
-        console.log('Linking tag to mini:', { tagId: tagResult.id, miniId })
-        // Link tag to mini
-        await db.run(
-          'INSERT INTO mini_to_tags (mini_id, tag_id) VALUES (?, ?)',
-          [miniId, tagResult.id]
-        )
-      }
-    }
-
-    // Insert product sets
-    if (parsedProductSets?.length > 0) {
-      console.log('Inserting product sets:', parsedProductSets)
-      for (const setId of parsedProductSets) {
-        await db.run(
-          'INSERT INTO mini_to_product_sets (mini_id, set_id) VALUES (?, ?)',
-          [miniId, setId]
-        )
       }
     }
 
@@ -889,17 +759,22 @@ app.post('/api/minis', upload.none(), async (req, res) => {
     console.log('Committing transaction')
     await db.run('COMMIT')
 
-    // Get the complete mini data
-    console.log('Fetching complete mini data')
-    const mini = await db.get(`
+    // Fetch the complete mini data with all relationships
+    const newMini = await db.get(`
       SELECT 
         m.*,
         GROUP_CONCAT(DISTINCT mc.name) as category_names,
         GROUP_CONCAT(DISTINCT mt.name) as type_names,
         GROUP_CONCAT(DISTINCT mpt.name) as proxy_type_names,
         GROUP_CONCAT(DISTINCT t.name) as tag_names,
-        GROUP_CONCAT(DISTINCT ps.name || ' (' || pl.name || ' by ' || pc.name || ')') as product_set_names
+        ps.name as product_set_name,
+        pl.name as product_line_name,
+        pc.name as manufacturer_name,
+        pb.painted_by_name,
+        bs.base_size_name
       FROM minis m
+      LEFT JOIN painted_by pb ON m.painted_by_id = pb.id
+      LEFT JOIN base_sizes bs ON m.base_size_id = bs.id
       LEFT JOIN mini_to_categories mtc ON m.id = mtc.mini_id
       LEFT JOIN mini_categories mc ON mtc.category_id = mc.id
       LEFT JOIN mini_to_types mtt ON m.id = mtt.mini_id
@@ -908,22 +783,18 @@ app.post('/api/minis', upload.none(), async (req, res) => {
       LEFT JOIN mini_types mpt ON mtpt.type_id = mpt.id
       LEFT JOIN mini_to_tags mttg ON m.id = mttg.mini_id
       LEFT JOIN tags t ON mttg.tag_id = t.id
-      LEFT JOIN mini_to_product_sets mtps ON m.id = mtps.mini_id
-      LEFT JOIN product_sets ps ON mtps.set_id = ps.id
+      LEFT JOIN product_sets ps ON m.product_set_id = ps.id
       LEFT JOIN product_lines pl ON ps.product_line_id = pl.id
       LEFT JOIN production_companies pc ON pl.company_id = pc.id
       WHERE m.id = ?
       GROUP BY m.id
     `, miniId)
 
-    console.log('Returning mini data:', mini)
-    res.status(201).json(mini)
+    res.status(201).json(newMini)
 
   } catch (error) {
-    // Rollback on error
-    console.error('Error during mini creation, rolling back:', error)
-    console.error('Stack trace:', error.stack)
     await db.run('ROLLBACK')
+    console.error('Error creating mini:', error)
     res.status(500).json({ error: error.message })
   }
 })
@@ -941,18 +812,27 @@ app.get('/api/tags', async (req, res) => {
   }
 })
 
-// Add this new endpoint to get all minis with their related data
+// Update the GET endpoint for minis
 app.get('/api/minis', async (req, res) => {
   try {
     const minis = await db.all(`
       SELECT 
         m.*,
+        pb.painted_by_name,
+        bs.base_size_name,
+        ps.name as product_set_name,
+        pl.name as product_line_name,
+        pc.name as manufacturer_name,
         GROUP_CONCAT(DISTINCT mc.name) as category_names,
         GROUP_CONCAT(DISTINCT mt.name) as type_names,
         GROUP_CONCAT(DISTINCT mpt.name) as proxy_type_names,
-        GROUP_CONCAT(DISTINCT t.name) as tag_names,
-        GROUP_CONCAT(DISTINCT ps.name || ' (' || pl.name || ' by ' || pc.name || ')') as product_set_names
+        GROUP_CONCAT(DISTINCT t.name) as tag_names
       FROM minis m
+      LEFT JOIN painted_by pb ON m.painted_by_id = pb.id
+      LEFT JOIN base_sizes bs ON m.base_size_id = bs.id
+      LEFT JOIN product_sets ps ON m.product_set_id = ps.id
+      LEFT JOIN product_lines pl ON ps.product_line_id = pl.id
+      LEFT JOIN production_companies pc ON pl.company_id = pc.id
       LEFT JOIN mini_to_categories mtc ON m.id = mtc.mini_id
       LEFT JOIN mini_categories mc ON mtc.category_id = mc.id
       LEFT JOIN mini_to_types mtt ON m.id = mtt.mini_id
@@ -961,67 +841,135 @@ app.get('/api/minis', async (req, res) => {
       LEFT JOIN mini_types mpt ON mtpt.type_id = mpt.id
       LEFT JOIN mini_to_tags mttg ON m.id = mttg.mini_id
       LEFT JOIN tags t ON mttg.tag_id = t.id
-      LEFT JOIN mini_to_product_sets mtps ON m.id = mtps.mini_id
-      LEFT JOIN product_sets ps ON mtps.set_id = ps.id
-      LEFT JOIN product_lines pl ON ps.product_line_id = pl.id
-      LEFT JOIN production_companies pc ON pl.company_id = pc.id
       GROUP BY m.id
-      ORDER BY m.name
+      ORDER BY m.id DESC
     `)
-    res.json(minis)
+
+    // Add image timestamps to prevent caching
+    const minisWithTimestamps = minis.map(mini => ({
+      ...mini,
+      image_path: mini.image_path ? `${mini.image_path}?t=${Date.now()}` : null,
+      original_image_path: mini.original_image_path ? `${mini.original_image_path}?t=${Date.now()}` : null
+    }))
+
+    res.json(minisWithTimestamps)
   } catch (error) {
+    console.error('Error fetching minis:', error)
     res.status(500).json({ error: error.message })
   }
 })
 
-app.delete('/api/minis/:id', async (req, res) => {
+// Update the GET endpoint for a single mini's relationships
+app.get('/api/minis/:id/relationships', async (req, res) => {
   try {
     const miniId = req.params.id
     
+    const mini = await db.get(`
+      SELECT 
+        m.*,
+        pb.painted_by_name,
+        bs.base_size_name,
+        ps.name as product_set_name,
+        pl.name as product_line_name,
+        pc.name as manufacturer_name,
+        GROUP_CONCAT(DISTINCT mc.name) as category_names,
+        GROUP_CONCAT(DISTINCT mc.id) as category_ids,
+        GROUP_CONCAT(DISTINCT mt.name) as type_names,
+        GROUP_CONCAT(DISTINCT mt.id) as type_ids,
+        GROUP_CONCAT(DISTINCT mpt.name) as proxy_type_names,
+        GROUP_CONCAT(DISTINCT mpt.id) as proxy_type_ids,
+        GROUP_CONCAT(DISTINCT t.name) as tag_names,
+        GROUP_CONCAT(DISTINCT t.id) as tag_ids,
+        GROUP_CONCAT(DISTINCT ps.id) as product_set_ids
+      FROM minis m
+      LEFT JOIN painted_by pb ON m.painted_by_id = pb.id
+      LEFT JOIN base_sizes bs ON m.base_size_id = bs.id
+      LEFT JOIN product_sets ps ON m.product_set_id = ps.id
+      LEFT JOIN product_lines pl ON ps.product_line_id = pl.id
+      LEFT JOIN production_companies pc ON pl.company_id = pc.id
+      LEFT JOIN mini_to_categories mtc ON m.id = mtc.mini_id
+      LEFT JOIN mini_categories mc ON mtc.category_id = mc.id
+      LEFT JOIN mini_to_types mtt ON m.id = mtt.mini_id
+      LEFT JOIN mini_types mt ON mtt.type_id = mt.id
+      LEFT JOIN mini_to_proxy_types mtpt ON m.id = mtpt.mini_id
+      LEFT JOIN mini_types mpt ON mtpt.type_id = mpt.id
+      LEFT JOIN mini_to_tags mttg ON m.id = mttg.mini_id
+      LEFT JOIN tags t ON mttg.tag_id = t.id
+      WHERE m.id = ?
+      GROUP BY m.id
+    `, miniId)
+    
+    if (!mini) {
+      return res.status(404).json({ error: 'Mini not found' })
+    }
+
+    // Convert comma-separated IDs to arrays
+    const processedMini = {
+      ...mini,
+      category_ids: mini.category_ids ? mini.category_ids.split(',') : [],
+      type_ids: mini.type_ids ? mini.type_ids.split(',') : [],
+      proxy_type_ids: mini.proxy_type_ids ? mini.proxy_type_ids.split(',') : [],
+      tag_ids: mini.tag_ids ? mini.tag_ids.split(',') : [],
+      product_set_ids: mini.product_set_ids ? mini.product_set_ids.split(',') : [],
+      image_path: mini.image_path ? `${mini.image_path}?t=${Date.now()}` : null,
+      original_image_path: mini.original_image_path ? `${mini.original_image_path}?t=${Date.now()}` : null
+    }
+
+    res.json(processedMini)
+  } catch (error) {
+    console.error('Error fetching mini relationships:', error)
+    res.status(500).json({ error: error.message })
+  }
+})
+
+// Update the DELETE endpoint for minis
+app.delete('/api/minis/:id', async (req, res) => {
+  try {
     await db.run('BEGIN TRANSACTION')
 
-    // Delete all related records first
-    await Promise.all([
-      // Delete mini-to-category relationships
-      db.run('DELETE FROM mini_to_categories WHERE mini_id = ?', miniId),
-      // Delete mini-to-type relationships
-      db.run('DELETE FROM mini_to_types WHERE mini_id = ?', miniId),
-      // Delete mini-to-proxy-type relationships
-      db.run('DELETE FROM mini_to_proxy_types WHERE mini_id = ?', miniId),
-      // Delete mini-to-tag relationships
-      db.run('DELETE FROM mini_to_tags WHERE mini_id = ?', miniId),
-      // Delete mini-to-product-set relationships
-      db.run('DELETE FROM mini_to_product_sets WHERE mini_id = ?', miniId)
-    ])
+    // Get the tags associated with this mini before deletion
+    const miniTags = await db.all(`
+      SELECT tag_id 
+      FROM mini_to_tags 
+      WHERE mini_id = ?
+    `, req.params.id)
 
-    // Clean up unused tags
-    await db.run(`
-      DELETE FROM tags 
-      WHERE id NOT IN (
-        SELECT DISTINCT tag_id 
-        FROM mini_to_tags
-      )
-    `)
-    
-    // Delete the images
-    await deleteImages(miniId)
-    
-    // Finally delete the mini record itself
-    await db.run('DELETE FROM minis WHERE id = ?', miniId)
-    
-    // Commit the transaction
+    // Delete the mini's tag associations
+    await db.run('DELETE FROM mini_to_tags WHERE mini_id = ?', req.params.id)
+
+    // For each tag that was associated with this mini
+    for (const { tag_id } of miniTags) {
+      // Check if this tag is still used by other minis
+      const tagUsage = await db.get(`
+        SELECT COUNT(*) as count 
+        FROM mini_to_tags 
+        WHERE tag_id = ?
+      `, tag_id)
+
+      // If no other minis use this tag, delete it from the tags table
+      if (tagUsage.count === 0) {
+        await db.run('DELETE FROM tags WHERE id = ?', tag_id)
+      }
+    }
+
+    // Delete the mini's other associations
+    await db.run('DELETE FROM mini_to_categories WHERE mini_id = ?', req.params.id)
+    await db.run('DELETE FROM mini_to_types WHERE mini_id = ?', req.params.id)
+    await db.run('DELETE FROM mini_to_proxy_types WHERE mini_id = ?', req.params.id)
+
+    // Delete the mini itself
+    await db.run('DELETE FROM minis WHERE id = ?', req.params.id)
+
     await db.run('COMMIT')
-    
     res.status(204).send()
   } catch (error) {
-    // Rollback on error
     await db.run('ROLLBACK')
     console.error('Error deleting mini:', error)
     res.status(500).json({ error: error.message })
   }
 })
 
-// Modify the PUT endpoint for minis
+// Update the PUT endpoint for minis
 app.put('/api/minis/:id', async (req, res) => {
   try {
     await db.run('BEGIN TRANSACTION')
@@ -1030,47 +978,31 @@ app.put('/api/minis/:id', async (req, res) => {
     const {
       name, description, location, image_path,
       quantity, categories, types, proxy_types, 
-      tags, product_sets, painted_by
+      tags, painted_by_id, base_size_id, product_set_id
     } = req.body
 
-    // Process new image if provided
-    let imagePaths = null
-    if (image_path && image_path.startsWith('data:image')) {
-      // Delete old images first
-      await deleteImages(miniId)
-      imagePaths = await processAndSaveImage(image_path, miniId)
-    }
-
-    // Update the main mini record
+    // Update the main mini record with direct references
     await db.run(
       `UPDATE minis SET
         name = ?, description = ?, location = ?, 
-        image_path = COALESCE(?, image_path),
-        original_image_path = COALESCE(?, original_image_path),
-        quantity = ?, painted_by = ?, updated_at = datetime('now')
+        quantity = ?, painted_by_id = ?, base_size_id = ?,
+        product_set_id = ?, updated_at = datetime('now')
       WHERE id = ?`,
       [
         name.trim(),
         description?.trim() || null,
         location.trim(),
-        imagePaths?.thumbnail,
-        imagePaths?.original,
         quantity || 1,
-        painted_by || 'prepainted',
+        painted_by_id || 1,
+        base_size_id || 3,
+        product_set_id || null,
         miniId
       ]
     )
 
-    // Clear existing relationships
+    // Update categories
     await db.run('DELETE FROM mini_to_categories WHERE mini_id = ?', miniId)
-    await db.run('DELETE FROM mini_to_types WHERE mini_id = ?', miniId)
-    await db.run('DELETE FROM mini_to_proxy_types WHERE mini_id = ?', miniId)
-    await db.run('DELETE FROM mini_to_tags WHERE mini_id = ?', miniId)
-    await db.run('DELETE FROM mini_to_product_sets WHERE mini_id = ?', miniId)
-
-    // Insert categories
     if (categories?.length > 0) {
-      console.log('Inserting updated categories:', categories)
       for (const categoryId of categories) {
         await db.run(
           'INSERT INTO mini_to_categories (mini_id, category_id) VALUES (?, ?)',
@@ -1079,9 +1011,9 @@ app.put('/api/minis/:id', async (req, res) => {
       }
     }
 
-    // Insert types
+    // Update types
+    await db.run('DELETE FROM mini_to_types WHERE mini_id = ?', miniId)
     if (types?.length > 0) {
-      console.log('Inserting updated types:', types)
       for (const typeId of types) {
         await db.run(
           'INSERT INTO mini_to_types (mini_id, type_id) VALUES (?, ?)',
@@ -1090,9 +1022,9 @@ app.put('/api/minis/:id', async (req, res) => {
       }
     }
 
-    // Insert proxy types
+    // Update proxy types
+    await db.run('DELETE FROM mini_to_proxy_types WHERE mini_id = ?', miniId)
     if (proxy_types?.length > 0) {
-      console.log('Inserting updated proxy types:', proxy_types)
       for (const typeId of proxy_types) {
         await db.run(
           'INSERT INTO mini_to_proxy_types (mini_id, type_id) VALUES (?, ?)',
@@ -1101,15 +1033,17 @@ app.put('/api/minis/:id', async (req, res) => {
       }
     }
 
-    // Insert tags
+    // Update tags
+    await db.run('DELETE FROM mini_to_tags WHERE mini_id = ?', miniId)
     if (tags?.length > 0) {
-      console.log('Processing updated tags:', tags)
       for (const tagName of tags) {
         let tagResult = await db.get('SELECT id FROM tags WHERE name = ?', tagName)
+        
         if (!tagResult) {
           const newTag = await db.run('INSERT INTO tags (name) VALUES (?)', tagName)
           tagResult = { id: newTag.lastID }
         }
+
         await db.run(
           'INSERT INTO mini_to_tags (mini_id, tag_id) VALUES (?, ?)',
           [miniId, tagResult.id]
@@ -1117,39 +1051,20 @@ app.put('/api/minis/:id', async (req, res) => {
       }
     }
 
-    // Clean up unused tags
-    await db.run(`
-      DELETE FROM tags 
-      WHERE id NOT IN (
-        SELECT DISTINCT tag_id 
-        FROM mini_to_tags
-      )
-    `)
-
-    // Insert product sets
-    if (product_sets?.length > 0) {
-      console.log('Inserting updated product sets:', product_sets)
-      for (const setId of product_sets) {
-        await db.run(
-          'INSERT INTO mini_to_product_sets (mini_id, set_id) VALUES (?, ?)',
-          [miniId, setId]
-        )
-      }
-    }
-
     // Commit the transaction
-    console.log('Committing transaction')
     await db.run('COMMIT')
 
     // Get the updated mini data
-    const mini = await db.get(`
+    const updatedMini = await db.get(`
       SELECT 
         m.*,
         GROUP_CONCAT(DISTINCT mc.name) as category_names,
         GROUP_CONCAT(DISTINCT mt.name) as type_names,
         GROUP_CONCAT(DISTINCT mpt.name) as proxy_type_names,
         GROUP_CONCAT(DISTINCT t.name) as tag_names,
-        GROUP_CONCAT(DISTINCT ps.name || ' (' || pl.name || ' by ' || pc.name || ')') as product_set_names
+        ps.name as product_set_name,
+        pl.name as product_line_name,
+        pc.name as manufacturer_name
       FROM minis m
       LEFT JOIN mini_to_categories mtc ON m.id = mtc.mini_id
       LEFT JOIN mini_categories mc ON mtc.category_id = mc.id
@@ -1159,80 +1074,62 @@ app.put('/api/minis/:id', async (req, res) => {
       LEFT JOIN mini_types mpt ON mtpt.type_id = mpt.id
       LEFT JOIN mini_to_tags mttg ON m.id = mttg.mini_id
       LEFT JOIN tags t ON mttg.tag_id = t.id
-      LEFT JOIN mini_to_product_sets mtps ON m.id = mtps.mini_id
-      LEFT JOIN product_sets ps ON mtps.set_id = ps.id
+      LEFT JOIN product_sets ps ON m.product_set_id = ps.id
       LEFT JOIN product_lines pl ON ps.product_line_id = pl.id
       LEFT JOIN production_companies pc ON pl.company_id = pc.id
       WHERE m.id = ?
       GROUP BY m.id
     `, miniId)
 
-    res.json(mini)
-
+    res.json(updatedMini)
   } catch (error) {
-    console.error('Error during mini update, rolling back:', error)
     await db.run('ROLLBACK')
+    console.error('Error updating mini:', error)
     res.status(500).json({ error: error.message })
   }
 })
 
-// Add endpoint to get mini with all relationships
+// Update the GET relationships endpoint
 app.get('/api/minis/:id/relationships', async (req, res) => {
   try {
     const miniId = req.params.id
     
-    // Get basic mini data
-    const mini = await db.get('SELECT * FROM minis WHERE id = ?', miniId)
-    
-    // Get categories
-    const categories = await db.all(`
-      SELECT category_id 
-      FROM mini_to_categories 
-      WHERE mini_id = ?
+    // Get mini with all its relationships
+    const mini = await db.get(`
+      SELECT 
+        m.*,
+        pb.painted_by_name,
+        bs.base_size_name,
+        ps.name as product_set_name,
+        pl.name as product_line_name,
+        pc.name as manufacturer_name,
+        GROUP_CONCAT(DISTINCT mc.name) as category_names,
+        GROUP_CONCAT(DISTINCT mt.name) as type_names,
+        GROUP_CONCAT(DISTINCT mpt.name) as proxy_type_names,
+        GROUP_CONCAT(DISTINCT t.name) as tag_names
+      FROM minis m
+      LEFT JOIN painted_by pb ON m.painted_by_id = pb.id
+      LEFT JOIN base_sizes bs ON m.base_size_id = bs.id
+      LEFT JOIN product_sets ps ON m.product_set_id = ps.id
+      LEFT JOIN product_lines pl ON ps.product_line_id = pl.id
+      LEFT JOIN production_companies pc ON pl.company_id = pc.id
+      LEFT JOIN mini_to_categories mtc ON m.id = mtc.mini_id
+      LEFT JOIN mini_categories mc ON mtc.category_id = mc.id
+      LEFT JOIN mini_to_types mtt ON m.id = mtt.mini_id
+      LEFT JOIN mini_types mt ON mtt.type_id = mt.id
+      LEFT JOIN mini_to_proxy_types mtpt ON m.id = mtpt.mini_id
+      LEFT JOIN mini_types mpt ON mtpt.type_id = mpt.id
+      LEFT JOIN mini_to_tags mttg ON m.id = mttg.mini_id
+      LEFT JOIN tags t ON mttg.tag_id = t.id
+      WHERE m.id = ?
+      GROUP BY m.id
     `, miniId)
     
-    // Get types
-    const types = await db.all(`
-      SELECT type_id 
-      FROM mini_to_types 
-      WHERE mini_id = ?
-    `, miniId)
-    
-    // Get proxy types
-    const proxyTypes = await db.all(`
-      SELECT type_id 
-      FROM mini_to_proxy_types 
-      WHERE mini_id = ?
-    `, miniId)
-    
-    // Get tags
-    const tags = await db.all(`
-      SELECT t.name 
-      FROM mini_to_tags mt
-      JOIN tags t ON mt.tag_id = t.id
-      WHERE mini_id = ?
-    `, miniId)
-    
-    // Get product sets
-    const productSets = await db.all(`
-      SELECT set_id 
-      FROM mini_to_product_sets 
-      WHERE mini_id = ?
-    `, miniId)
-    
-    res.json({
-      ...mini,
-      categories: categories.map(c => c.category_id.toString()),
-      types: types.map(t => t.type_id.toString()),
-      proxy_types: proxyTypes.map(t => t.type_id.toString()),
-      tags: tags.map(t => t.name),
-      product_sets: productSets.map(ps => ps.set_id.toString())
-    })
-    
+    res.json(mini)
   } catch (error) {
     res.status(500).json({ error: error.message })
   }
-}) 
+})
 
 // Update the static file serving
 app.use('/images', express.static(path.join(__dirname, '..', 'public', 'images'))) 
@@ -1361,4 +1258,17 @@ app.get('/api/base-sizes', async (req, res) => {
   } catch (error) {
     res.status(500).json({ error: error.message })
   }
-}) 
+})
+
+// Add endpoint to get painted_by options
+app.get('/api/painted-by', async (req, res) => {
+  try {
+    const paintedBy = await db.all('SELECT * FROM painted_by ORDER BY id')
+    res.json(paintedBy)
+  } catch (error) {
+    res.status(500).json({ error: error.message })
+  }
+})
+
+// Add the closing brace for the entire module
+module.exports = app 

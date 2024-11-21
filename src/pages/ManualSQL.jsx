@@ -7,19 +7,7 @@ import { api } from '../database/db'
 const EXAMPLE_QUERIES = {
   'Show Tables': `SELECT name FROM sqlite_master WHERE type='table';`,
   'List Categories': 'SELECT * FROM mini_categories;',
-  'Count Minis': 'SELECT COUNT(*) as total FROM minis;',
-  'Complex Join': `
-SELECT m.name, mc.name as category, mt.name as type, pl.name as product_line
-FROM minis m
-LEFT JOIN mini_to_categories mtc ON m.id = mtc.mini_id
-LEFT JOIN mini_categories mc ON mtc.category_id = mc.id
-LEFT JOIN mini_to_types mtt ON m.id = mtt.mini_id
-LEFT JOIN mini_types mt ON mtt.type_id = mt.id
-LEFT JOIN mini_to_product_sets mtps ON m.id = mtps.mini_id
-LEFT JOIN product_sets ps ON mtps.set_id = ps.id
-LEFT JOIN product_lines pl ON ps.product_line_id = pl.id
-LIMIT 10;
-  `
+  'Count Minis': 'SELECT COUNT(*) as total FROM minis;'
 }
 
 const ManualSQL = () => {

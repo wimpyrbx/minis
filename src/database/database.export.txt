@@ -1,5 +1,5 @@
 -- Database Schema Export
--- Generated at: 2024-11-21T21:17:29.349Z
+-- Generated at: 2024-11-21T23:32:29.380Z
 -- ----------------------------------------
 
 
@@ -25,31 +25,6 @@ CREATE TABLE mini_categories  (
       
 )
 
-CREATE TABLE mini_to_base_sizes  (
-    
-    mini_id INTEGER NOT NULL,
-    
-    base_size_id INTEGER NOT NULL,
-    
-    FOREIGN KEY  (
-    mini_id
-) REFERENCES minis (
-    id
-) ON DELETE CASCADE,
-    
-    FOREIGN KEY  (
-    base_size_id
-) REFERENCES "base_sizes" (
-    id
-) ON DELETE CASCADE,
-    
-    PRIMARY KEY  (
-    mini_id,
-     base_size_id
-)
-
-)
-
 CREATE TABLE mini_to_categories  (
     
     mini_id INTEGER NOT NULL,
@@ -58,69 +33,19 @@ CREATE TABLE mini_to_categories  (
     
     FOREIGN KEY  (
     mini_id
-) REFERENCES minis (
+) REFERENCES minis  (
     id
 ) ON DELETE CASCADE,
     
     FOREIGN KEY  (
     category_id
-) REFERENCES mini_categories (
+) REFERENCES mini_categories  (
     id
 ) ON DELETE CASCADE,
     
     PRIMARY KEY  (
     mini_id,
      category_id
-)
-
-)
-
-CREATE TABLE mini_to_painted_by  (
-    
-    mini_id INTEGER NOT NULL,
-    
-    painted_by_id INTEGER NOT NULL,
-    
-    FOREIGN KEY  (
-    mini_id
-) REFERENCES minis (
-    id
-) ON DELETE CASCADE,
-    
-    FOREIGN KEY  (
-    painted_by_id
-) REFERENCES painted_by (
-    id
-) ON DELETE CASCADE,
-    
-    PRIMARY KEY  (
-    mini_id,
-     painted_by_id
-)
-
-)
-
-CREATE TABLE mini_to_product_sets  (
-    
-    mini_id INTEGER NOT NULL,
-    
-    set_id INTEGER NOT NULL,
-    
-    FOREIGN KEY  (
-    mini_id
-) REFERENCES minis (
-    id
-) ON DELETE CASCADE,
-    
-    FOREIGN KEY  (
-    set_id
-) REFERENCES product_sets (
-    id
-) ON DELETE CASCADE,
-    
-    PRIMARY KEY  (
-    mini_id,
-     set_id
 )
 
 )
@@ -133,13 +58,13 @@ CREATE TABLE mini_to_proxy_types  (
     
     FOREIGN KEY  (
     mini_id
-) REFERENCES minis (
+) REFERENCES minis  (
     id
 ) ON DELETE CASCADE,
     
     FOREIGN KEY  (
     type_id
-) REFERENCES mini_types (
+) REFERENCES mini_types  (
     id
 ) ON DELETE CASCADE,
     
@@ -158,13 +83,13 @@ CREATE TABLE mini_to_tags  (
     
     FOREIGN KEY  (
     mini_id
-) REFERENCES minis (
+) REFERENCES minis  (
     id
 ) ON DELETE CASCADE,
     
     FOREIGN KEY  (
     tag_id
-) REFERENCES tags (
+) REFERENCES tags  (
     id
 ) ON DELETE CASCADE,
     
@@ -183,13 +108,13 @@ CREATE TABLE mini_to_types  (
     
     FOREIGN KEY  (
     mini_id
-) REFERENCES minis (
+) REFERENCES minis  (
     id
 ) ON DELETE CASCADE,
     
     FOREIGN KEY  (
     type_id
-) REFERENCES mini_types (
+) REFERENCES mini_types  (
     id
 ) ON DELETE CASCADE,
     
@@ -232,7 +157,7 @@ CREATE TABLE minis  (
     description TEXT,
     
     location TEXT NOT NULL,
-      -- Now required
+    
     quantity INTEGER DEFAULT 1 CHECK  (
     quantity >= 0
 ),
@@ -247,16 +172,20 @@ CREATE TABLE minis  (
     datetime (
     'now'
 )
-)
-,
-     base_size_id INTEGER NOT NULL DEFAULT 3  -- 3 assuming 'medium' is id 3
-    REFERENCES "base_sizes" (
+),
+    
+    painted_by_id INTEGER NOT NULL DEFAULT 1 REFERENCES painted_by (
     id
 ),
-     painted_by_id INTEGER NOT NULL DEFAULT 1  -- 1 assuming 'prepainted' is id 1
-    REFERENCES painted_by (
+    
+    base_size_id INTEGER NOT NULL DEFAULT 3 REFERENCES base_sizes (
+    id
+),
+    
+    product_set_id INTEGER REFERENCES product_sets (
     id
 )
+
 )
 
 CREATE TABLE painted_by  (

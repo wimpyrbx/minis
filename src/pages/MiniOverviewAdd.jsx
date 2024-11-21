@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { Modal, Button, Form, Card, Row, Col, Alert } from 'react-bootstrap'
-import { faImage } from '@fortawesome/free-solid-svg-icons'
+import { faImage, faDiceD20 } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { api } from '../database/db'
 import SearchableSelect from '../components/SearchableSelect'
@@ -34,6 +34,22 @@ const MiniOverviewAdd = ({ show, handleClose, categories, types, tags, productSe
 
   // Add error state
   const [error, setError] = useState(null)
+
+  // Fetch painted_by options and update state
+  const [paintedByOptions, setPaintedByOptions] = useState([])
+
+  useEffect(() => {
+    const fetchPaintedByOptions = async () => {
+      try {
+        const response = await api.get('/api/painted-by')
+        setPaintedByOptions(response.data)
+      } catch (error) {
+        console.error('Error fetching painted by options:', error)
+      }
+    }
+
+    fetchPaintedByOptions()
+  }, [])
 
   // Handler for image upload and compression
   const handleImageUpload = async (file) => {
@@ -124,8 +140,8 @@ const MiniOverviewAdd = ({ show, handleClose, categories, types, tags, productSe
         types: newMini.types,
         proxy_types: newMini.proxy_types,
         product_sets: newMini.product_sets,
-        tag_ids: newMini.tags.map(tagName => tags.find(t => t.name === tagName)?.id.toString()).filter(Boolean),
-        tag_names: String(newMini.tags.join(',')),
+        base_size_id: newMini.base_size_id,
+        tags: newMini.tags,
         painted_by: String(newMini.painted_by)
       }
 
@@ -259,9 +275,12 @@ const MiniOverviewAdd = ({ show, handleClose, categories, types, tags, productSe
   }
 
   return (
-    <Modal show={show} onHide={handleClose} size="lg">
-      <Modal.Header closeButton className="bg-primary bg-opacity-10">
-        <Modal.Title>Add New Mini</Modal.Title>
+    <Modal show={show} onHide={handleClose} size="xl">
+      <Modal.Header closeButton>
+        <Modal.Title>
+          <FontAwesomeIcon icon={faDiceD20} className="me-2" />
+          Add New Mini
+        </Modal.Title>
       </Modal.Header>
       <Modal.Body>
         {error && (
@@ -277,12 +296,13 @@ const MiniOverviewAdd = ({ show, handleClose, categories, types, tags, productSe
             </Card.Header>
             <Card.Body>
               <Row>
-                <Col md={3}>
+                <Col md={2}>
                   <h6 className="mb-2">Image</h6>
                   <div 
                     className="image-drop-zone"
                     style={{
-                      height: '76px',
+                      width: '100%',
+                      aspectRatio: '1/1',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
@@ -338,9 +358,9 @@ const MiniOverviewAdd = ({ show, handleClose, categories, types, tags, productSe
                     )}
                   </div>
                 </Col>
-                <Col md={9}>
+                <Col md={10}>
                   <Row>
-                    <Col md={6}>
+                    <Col md={3}>
                       <Form.Group>
                         <Form.Label>Name <span className="text-danger">*</span></Form.Label>
                         <Form.Control
@@ -357,18 +377,53 @@ const MiniOverviewAdd = ({ show, handleClose, categories, types, tags, productSe
                         )}
                       </Form.Group>
                     </Col>
-                    <Col md={6}>
+                    <Col md={3}>
+                      <Form.Group>
+                        <Form.Label>Base Size:</Form.Label>
+                        <Form.Select
+                          value={newMini.base_size_id}
+                          onChange={(e) => setNewMini(prev => ({ ...prev, base_size_id: e.target.value }))}
+                        >
+                          {baseSizes.map(size => (
+                            <option key={size.id} value={size.id}>
+                              {size.base_size_name.split('_')
+                                .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+                                .join(' ')}
+                            </option>
+                          ))}
+                        </Form.Select>
+                      </Form.Group>
+                    </Col>
+                    <Col md={2}>
+                      <Form.Group>
+                        <Form.Label>Quantity</Form.Label>
+                        <Form.Control
+                          type="number"
+                          min="1"
+                          value={newMini.quantity}
+                          onChange={(e) => {
+                            const value = parseInt(e.target.value) || 1
+                            if (value > 0) {
+                              setNewMini(prev => ({ ...prev, quantity: value }))
+                            }
+                          }}
+                          required
+                          style={{ width: '60px' }}
+                        />
+                      </Form.Group>
+                    </Col>
+                    <Col md={4}>
                       <Form.Group>
                         <Form.Label>Painted By</Form.Label>
                         <div className="d-flex gap-3">
                           <Form.Check
                             type="radio"
                             id="painted-prepainted"
-                            label="Prepainted"
+                            label="Pre-Painted"
                             name="paintedBy"
                             value="prepainted"
                             checked={newMini.painted_by === 'prepainted'}
-                            onChange={(e) => setNewMini({...newMini, painted_by: e.target.value})}
+                            onChange={(e) => setNewMini(prev => ({ ...prev, painted_by: e.target.value }))}
                           />
                           <Form.Check
                             type="radio"
@@ -377,7 +432,7 @@ const MiniOverviewAdd = ({ show, handleClose, categories, types, tags, productSe
                             name="paintedBy"
                             value="self"
                             checked={newMini.painted_by === 'self'}
-                            onChange={(e) => setNewMini({...newMini, painted_by: e.target.value})}
+                            onChange={(e) => setNewMini(prev => ({ ...prev, painted_by: e.target.value }))}
                           />
                           <Form.Check
                             type="radio"
@@ -386,7 +441,7 @@ const MiniOverviewAdd = ({ show, handleClose, categories, types, tags, productSe
                             name="paintedBy"
                             value="other"
                             checked={newMini.painted_by === 'other'}
-                            onChange={(e) => setNewMini({...newMini, painted_by: e.target.value})}
+                            onChange={(e) => setNewMini(prev => ({ ...prev, painted_by: e.target.value }))}
                           />
                         </div>
                       </Form.Group>
@@ -395,56 +450,68 @@ const MiniOverviewAdd = ({ show, handleClose, categories, types, tags, productSe
                   <Row className="mt-3">
                     <Col md={6}>
                       <Form.Group>
-                        <Form.Label>Location <span className="text-danger">*</span></Form.Label>
-                        <Form.Control
-                          type="text"
-                          value={newMini.location}
-                          onChange={(e) => setNewMini({...newMini, location: e.target.value})}
-                          required
-                          isInvalid={validationErrors.location}
-                        />
-                        {validationErrors.location && (
-                          <Form.Control.Feedback type="invalid">
-                            Location is required
-                          </Form.Control.Feedback>
-                        )}
-                      </Form.Group>
-                    </Col>
-                    <Col md={6}>
-                      <Form.Group>
                         <Form.Label>Description</Form.Label>
                         <Form.Control
                           as="textarea"
-                          rows={2}
+                          rows={4}
                           value={newMini.description}
-                          onChange={(e) => setNewMini({...newMini, description: e.target.value})}
-                          style={{ minHeight: '38px' }}
-                        />
-                      </Form.Group>
-                    </Col>
-                  </Row>
-                  <Row>
-                    <Col md={6}>
-                      <Form.Group className="mt-3">
-                        <Form.Label>Quantity: {newMini.quantity}</Form.Label>
-                        <Form.Range
-                          min={1}
-                          max={100}
-                          value={newMini.quantity}
-                          onChange={(e) => setNewMini(prev => ({ ...prev, quantity: parseInt(e.target.value) }))}
+                          onChange={(e) => setNewMini(prev => ({ ...prev, description: e.target.value }))}
+                          style={{ height: '100px', minHeight: '100px' }}
                         />
                       </Form.Group>
                     </Col>
                     <Col md={6}>
-                      <Form.Group className="mt-3">
-                        <Form.Label>
-                          {baseSizes.find(b => b.id.toString() === newMini.base_size_id)?.base_size_name}
-                        </Form.Label>
-                        <Form.Range
-                          min={1}
-                          max={baseSizes.length}
-                          value={newMini.base_size_id}
-                          onChange={(e) => setNewMini(prev => ({ ...prev, base_size_id: e.target.value }))}
+                      <Form.Group className="mb-3">
+                        <Form.Label>Product Set</Form.Label>
+                        <SearchableSelect
+                          items={productSets.filter(set => !newMini.product_sets.includes(set.id.toString()))}
+                          value={newMini.product_sets}
+                          onChange={(selectedSets) => {
+                            let setIds
+                            if (Array.isArray(selectedSets)) {
+                              setIds = selectedSets.map(set => set.id.toString())
+                            } else if (selectedSets) {
+                              setIds = [selectedSets.id.toString()]
+                            } else {
+                              setIds = []
+                            }
+                            setNewMini(prev => ({
+                              ...prev,
+                              product_sets: setIds
+                            }))
+                          }}
+                          placeholder="Search product sets..."
+                          renderOption={(set) => `${set.manufacturer_name} » ${set.product_line_name} » ${set.name}`}
+                          multiple={false}
+                        />
+                        <div className="mt-2">
+                          {Array.isArray(newMini.product_sets) && newMini.product_sets.map(setId => {
+                            const set = productSets.find(s => s.id.toString() === setId)
+                            return set ? (
+                              <span
+                                key={set.id}
+                                className="badge bg-primary me-1 mb-1"
+                                style={{ cursor: 'pointer' }}
+                                onClick={() => {
+                                  setNewMini(prev => ({
+                                    ...prev,
+                                    product_sets: prev.product_sets.filter(id => id !== setId)
+                                  }))
+                                }}
+                              >
+                                {`${set.manufacturer_name} » ${set.product_line_name} » ${set.name}`} ×
+                              </span>
+                            ) : null
+                          })}
+                        </div>
+                      </Form.Group>
+                      <Form.Group>
+                        <Form.Label>Tags</Form.Label>
+                        <TagInput
+                          value={newMini.tags}
+                          onChange={(tags) => setNewMini({...newMini, tags})}
+                          existingTags={tags.map(tag => tag.name)}
+                          placeholder="Type tag and press Enter or comma to add..."
                         />
                       </Form.Group>
                     </Col>
@@ -467,15 +534,24 @@ const MiniOverviewAdd = ({ show, handleClose, categories, types, tags, productSe
                       Categories <span className="text-danger">*</span>
                     </Form.Label>
                     <SearchableSelect
-                      items={categories}
+                      items={categories.filter(cat => !newMini.categories.includes(cat.id.toString()))}
                       value={newMini.categories}
                       onChange={(selectedCategories) => {
                         // Handle both single and multiple selections
                         let categoryIds
                         if (Array.isArray(selectedCategories)) {
-                          categoryIds = selectedCategories.map(cat => cat.id.toString())
+                          // For multiple selections, filter out any already selected categories
+                          categoryIds = selectedCategories
+                            .map(cat => cat.id.toString())
+                            .filter(id => !newMini.categories.includes(id))
                         } else if (selectedCategories) {
-                          categoryIds = [...newMini.categories, selectedCategories.id.toString()]
+                          // For single selection, only add if not already selected
+                          const newCatId = selectedCategories.id.toString()
+                          if (!newMini.categories.includes(newCatId)) {
+                            categoryIds = [...newMini.categories, newCatId]
+                          } else {
+                            categoryIds = newMini.categories
+                          }
                         } else {
                           categoryIds = []
                         }
@@ -623,68 +699,6 @@ const MiniOverviewAdd = ({ show, handleClose, categories, types, tags, productSe
                             }}
                           >
                             {`${type.category_name}: ${type.name}`} ×
-                          </span>
-                        ) : null
-                      })}
-                    </div>
-                  </Form.Group>
-                </Col>
-              </Row>
-
-              <Row>
-                <Col md={5}>
-                  <Form.Group className="mb-3">
-                    <Form.Label>Tags</Form.Label>
-                    <TagInput
-                      value={newMini.tags}
-                      onChange={(tags) => setNewMini({...newMini, tags})}
-                      existingTags={tags.map(tag => tag.name)}
-                      placeholder="Type tag and press Enter or comma to add..."
-                    />
-                  </Form.Group>
-                </Col>
-                <Col md={7}>
-                  <Form.Group className="mb-3">
-                    <Form.Label>Product Set</Form.Label>
-                    <SearchableSelect
-                      items={productSets.filter(set => !newMini.product_sets.includes(set.id.toString()))}
-                      value={newMini.product_sets}
-                      onChange={(selectedSets) => {
-                        // Handle both single and multiple selections
-                        let setIds
-                        if (Array.isArray(selectedSets)) {
-                          setIds = selectedSets.map(set => set.id.toString())
-                        } else if (selectedSets) {
-                          setIds = [...newMini.product_sets, selectedSets.id.toString()]
-                        } else {
-                          setIds = []
-                        }
-
-                        setNewMini(prev => ({
-                          ...prev,
-                          product_sets: setIds
-                        }))
-                      }}
-                      placeholder="Search product sets..."
-                      renderOption={(set) => `${set.manufacturer_name} » ${set.product_line_name} » ${set.name}`}
-                      multiple
-                    />
-                    <div className="mt-2">
-                      {Array.isArray(newMini.product_sets) && newMini.product_sets.map(setId => {
-                        const set = productSets.find(s => s.id.toString() === setId)
-                        return set ? (
-                          <span
-                            key={set.id}
-                            className="badge bg-primary me-1 mb-1"
-                            style={{ cursor: 'pointer' }}
-                            onClick={() => {
-                              setNewMini(prev => ({
-                                ...prev,
-                                product_sets: prev.product_sets.filter(id => id !== setId)
-                              }))
-                            }}
-                          >
-                            {`${set.manufacturer_name} » ${set.product_line_name} » ${set.name}`} ×
                           </span>
                         ) : null
                       })}
