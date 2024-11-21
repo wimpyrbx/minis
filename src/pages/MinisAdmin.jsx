@@ -3,6 +3,7 @@ import { Container, Row, Col, Form, Button, Table, Alert, Card, Modal } from 're
 import { faCubes, faTrash, faLayerGroup, faCube, faPencil } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { api } from '../database/db'
+import TableButton from '../components/TableButton'
 
 const MinisAdmin = () => {
   const [categories, setCategories] = useState([])
@@ -188,21 +189,19 @@ const MinisAdmin = () => {
                       <td>{category.name}</td>
                       <td>{category.image_path}</td>
                       <td className="text-nowrap">
-                        <Button
+                        <TableButton
+                          icon={faPencil}
                           variant="primary"
-                          size="sm"
-                          className="me-2"
                           onClick={() => openCategoryModal(category)}
-                        >
-                          <FontAwesomeIcon icon={faPencil} />
-                        </Button>
-                        <Button
+                          title="Edit Category"
+                          className="me-2"
+                        />
+                        <TableButton
+                          icon={faTrash}
                           variant="danger"
-                          size="sm"
                           onClick={() => handleDeleteCategory(category.id)}
-                        >
-                          <FontAwesomeIcon icon={faTrash} />
-                        </Button>
+                          title="Delete Category"
+                        />
                       </td>
                     </tr>
                   ))}
@@ -285,21 +284,19 @@ const MinisAdmin = () => {
                       <td>{type.category_name}</td>
                       <td>{type.image_path}</td>
                       <td className="text-nowrap">
-                        <Button
+                        <TableButton
+                          icon={faPencil}
                           variant="primary"
-                          size="sm"
-                          className="me-2"
                           onClick={() => openTypeModal(type)}
-                        >
-                          <FontAwesomeIcon icon={faPencil} />
-                        </Button>
-                        <Button
+                          title="Edit Type"
+                          className="me-2"
+                        />
+                        <TableButton
+                          icon={faTrash}
                           variant="danger"
-                          size="sm"
                           onClick={() => handleDeleteType(type.id)}
-                        >
-                          <FontAwesomeIcon icon={faTrash} />
-                        </Button>
+                          title="Delete Type"
+                        />
                       </td>
                     </tr>
                   ))}

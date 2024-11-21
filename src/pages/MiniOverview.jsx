@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { Container, Table, Form, Button, Card, Modal, Row, Col } from 'react-bootstrap'
-import { faTable, faPlus, faImage, faPencil, faTrash } from '@fortawesome/free-solid-svg-icons'
+import { faTable, faPlus, faImage, faPencil, faTrash, faLayerGroup, faCube, faExchangeAlt, faTags, faBox, faList, faTableCells } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { api } from '../database/db'
 import SearchableSelect from '../components/SearchableSelect'
@@ -8,6 +8,8 @@ import TagInput from '../components/TagInput'
 import { useTheme } from '../context/ThemeContext'
 import ImageModal from '../components/ImageModal'
 import '../styles/ImageModal.css'
+import TableButton from '../components/TableButton'
+import MiniCardGrid from '../components/MiniCards/MiniCardGrid'
 
 const MiniOverview = () => {
   const { darkMode } = useTheme()
@@ -64,6 +66,55 @@ const MiniOverview = () => {
   // Add state for image modal
   const [showImageModal, setShowImageModal] = useState(false)
   const [selectedImage, setSelectedImage] = useState(null)
+
+  // Add state for original mini data
+  const [originalMini, setOriginalMini] = useState(null)
+
+  // Add these new states near the top with other states
+  const [entriesPerPage, setEntriesPerPage] = useState(10)
+  const [currentPage, setCurrentPage] = useState(1)
+
+  // Add new state for view type
+  const [viewType, setViewType] = useState('table')
+
+  // Add useEffect to load view type preference
+  useEffect(() => {
+    const loadSettings = async () => {
+      try {
+        const response = await api.get('/api/settings')
+        if (response.data.collection_viewtype) {
+          setViewType(response.data.collection_viewtype)
+        }
+        if (response.data.collection_show_entries_per_page) {
+          setEntriesPerPage(parseInt(response.data.collection_show_entries_per_page))
+        }
+      } catch (error) {
+        console.error('Error loading settings:', error)
+      }
+    }
+    loadSettings()
+  }, [])
+
+  // Add this function to handle entries per page change
+  const handleEntriesPerPageChange = async (value) => {
+    const newValue = parseInt(value)
+    setEntriesPerPage(newValue)
+    setCurrentPage(1) // Reset to first page when changing entries per page
+    
+    try {
+      await api.put(`/api/settings/collection_show_entries_per_page`, {
+        value: newValue.toString()
+      })
+    } catch (error) {
+      console.error('Error saving setting:', error)
+    }
+  }
+
+  // Add this before the table to calculate paginated data
+  const paginatedMinis = minis.slice(
+    (currentPage - 1) * entriesPerPage,
+    currentPage * entriesPerPage
+  )
 
   const fetchMinis = async () => {
     try {
@@ -200,15 +251,22 @@ const MiniOverview = () => {
         const type = types.find(t => t.id.toString() === typeId)
         return type && values.includes(type.category_id.toString())
       })
-      setNewMini({ 
-        ...newMini, 
+      setNewMini(prev => ({ 
+        ...prev, 
         categories: values,
-        types: newTypes
-      })
-    } else if (field === 'proxy_types') {
-      setNewMini({ ...newMini, proxy_types: values })
+        types: newTypes,
+        // Clear proxy types if no types remain
+        proxy_types: newTypes.length === 0 ? [] : prev.proxy_types
+      }))
+    } else if (field === 'types') {
+      setNewMini(prev => ({ 
+        ...prev, 
+        types: values,
+        // Clear proxy types if no types remain
+        proxy_types: values.length === 0 ? [] : prev.proxy_types
+      }))
     } else {
-      setNewMini({ ...newMini, [field]: values })
+      setNewMini(prev => ({ ...prev, [field]: values }))
     }
   }
 
@@ -330,28 +388,41 @@ const MiniOverview = () => {
   }
 
   const handleRemoveCategory = (categoryId) => {
+    const updatedTypes = newMini.types.filter(typeId => {
+      const type = types.find(t => t.id.toString() === typeId)
+      return type && type.category_id.toString() !== categoryId.toString()
+    })
+
     setNewMini({
       ...newMini,
       categories: newMini.categories.filter(id => id !== categoryId.toString()),
-      // Also remove types that belong to this category
-      types: newMini.types.filter(typeId => {
-        const type = types.find(t => t.id.toString() === typeId)
-        return type && type.category_id.toString() !== categoryId.toString()
-      })
+      types: updatedTypes,
+      // Clear proxy types if no types remain
+      proxy_types: updatedTypes.length === 0 ? [] : newMini.proxy_types
     })
     setSelectedCategories(selectedCategories.filter(cat => cat.id !== categoryId))
-    // Also remove corresponding types from selectedTypes
     setSelectedTypes(selectedTypes.filter(type => 
       type.category_id.toString() !== categoryId.toString()
     ))
+    // Clear selectedProxyTypes if no types remain
+    if (updatedTypes.length === 0) {
+      setSelectedProxyTypes([])
+    }
   }
 
   const handleRemoveType = (typeId) => {
-    setNewMini({
-      ...newMini,
-      types: newMini.types.filter(id => id !== typeId.toString())
-    })
+    const updatedTypes = newMini.types.filter(id => id !== typeId.toString())
+    setNewMini(prev => ({
+      ...prev,
+      types: updatedTypes,
+      // If no types remain, clear proxy types
+      proxy_types: updatedTypes.length === 0 ? [] : prev.proxy_types
+    }))
     setSelectedTypes(selectedTypes.filter(type => type.id !== typeId))
+    // Also clear selectedProxyTypes if no types remain
+    if (updatedTypes.length === 0) {
+      setSelectedProxyTypes([])
+    }
   }
 
   // Add this function to handle image compression
@@ -488,6 +559,7 @@ const MiniOverview = () => {
           tags: response.data.tags || editMini.tags
         }
         setEditingMini(completeData)
+        setOriginalMini(completeData) // Store original data
         setShowEditModal(true)
       })
       .catch(error => {
@@ -544,6 +616,57 @@ const MiniOverview = () => {
     setShowImageModal(true)
   }
 
+  // Update the isValidMini function
+  const isValidMini = (mini) => {
+    if (!mini) return false
+    
+    return (
+      mini.name?.trim() &&
+      mini.location?.trim() &&
+      Array.isArray(mini.categories) && mini.categories.length > 0 &&
+      Array.isArray(mini.types) && mini.types.length > 0
+    )
+  }
+
+  // Also update the hasChanges function with similar safety checks
+  const hasChanges = (current, original) => {
+    if (!current || !original) return false
+    
+    return (
+      current.name !== original.name ||
+      current.location !== original.location ||
+      current.description !== original.description ||
+      current.quantity !== original.quantity ||
+      current.image_path !== original.image_path ||
+      !arraysEqual(current.categories || [], original.categories || []) ||
+      !arraysEqual(current.types || [], original.types || []) ||
+      !arraysEqual(current.proxy_types || [], original.proxy_types || []) ||
+      !arraysEqual(current.tags || [], original.tags || []) ||
+      !arraysEqual(current.product_sets || [], original.product_sets || [])
+    )
+  }
+
+  // Update the arraysEqual function to handle null/undefined
+  const arraysEqual = (a, b) => {
+    if (!Array.isArray(a) || !Array.isArray(b)) return false
+    if (a.length !== b.length) return false
+    const sortedA = [...a].sort()
+    const sortedB = [...b].sort()
+    return sortedA.every((val, idx) => val === sortedB[idx])
+  }
+
+  // Add handler for view type change
+  const handleViewTypeChange = async (type) => {
+    setViewType(type)
+    try {
+      await api.put(`/api/settings/collection_viewtype`, {
+        value: type
+      })
+    } catch (error) {
+      console.error('Error saving view type setting:', error)
+    }
+  }
+
   if (loading) return <div>Loading...</div>
   if (error) return <div>Error: {error}</div>
 
@@ -561,81 +684,139 @@ const MiniOverview = () => {
 
       <div className="bg-white p-4 rounded shadow-sm">
         <div className="d-flex justify-content-between align-items-center mb-4">
-          <h5 className="mb-0">Collection List</h5>
-          <Button variant="primary" onClick={() => setShowAddModal(true)}>
+          <div className="d-flex align-items-center">
+            <div className="d-flex align-items-center me-4" style={{ whiteSpace: 'nowrap' }}>
+              <span className="me-2">Show</span>
+              <Form.Select 
+                size="sm" 
+                style={{ width: '65px' }}  // Made even smaller
+                value={entriesPerPage}
+                onChange={(e) => handleEntriesPerPageChange(e.target.value)}
+              >
+                <option value="10">10</option>
+                <option value="25">25</option>
+                <option value="50">50</option>
+              </Form.Select>
+              <span className="ms-2">entries</span>
+            </div>
+            <div className="btn-group me-4">  {/* Added margin to the right */}
+              <Button 
+                variant={viewType === 'table' ? 'primary' : 'outline-primary'}
+                onClick={() => handleViewTypeChange('table')}
+                title="Table View"
+              >
+                <FontAwesomeIcon icon={faList} />
+              </Button>
+              <Button 
+                variant={viewType === 'cards' ? 'primary' : 'outline-primary'}
+                onClick={() => handleViewTypeChange('cards')}
+                title="Card View"
+              >
+                <FontAwesomeIcon icon={faTableCells} />
+              </Button>
+            </div>
+          </div>
+          <Button 
+            variant="primary" 
+            onClick={() => setShowAddModal(true)} 
+            style={{ whiteSpace: 'nowrap' }}  // Prevent text wrapping
+          >
             <FontAwesomeIcon icon={faPlus} className="me-2" />
             Add New Mini
           </Button>
         </div>
 
-        <Table hover responsive>
-          <thead>
-            <tr>
-              <th>Name</th>
-              <th>Location</th>
-              <th>Categories</th>
-              <th>Types</th>
-              <th>Proxy Types</th>
-              <th>Product Sets</th>
-              <th>Tags</th>
-              <th>Quantity</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {minis.map(mini => (
-              <tr key={mini.id}>
-                <td>
-                  {mini.image_path && (
-                    <img 
-                      src={mini.image_path} 
-                      alt={mini.name}
-                      style={{ 
-                        width: '50px', 
-                        height: '50px', 
-                        objectFit: 'cover',
-                        marginRight: '10px',
-                        cursor: 'pointer'
-                      }}
-                      onClick={() => handleImageClick(mini)}
-                      title="Click to view full image"
-                    />
-                  )}
-                  {mini.name}
-                </td>
-                <td>{mini.location}</td>
-                <td>{mini.category_names?.split(',').join(', ')}</td>
-                <td>{mini.type_names?.split(',').join(', ')}</td>
-                <td>{mini.proxy_type_names?.split(',').join(', ')}</td>
-                <td>{mini.product_set_names?.split(',').join(', ')}</td>
-                <td>{mini.tag_names?.split(',').join(', ')}</td>
-                <td>{mini.quantity}</td>
-                <td>
-                  <Button
-                    variant="primary"
-                    size="sm"
-                    className="me-2"
-                    onClick={() => handleEditMini(mini)}
-                  >
-                    <FontAwesomeIcon icon={faPencil} />
-                  </Button>
-                  <Button
-                    variant="danger"
-                    size="sm"
-                    onClick={() => handleDeleteMini(mini.id)}
-                  >
-                    <FontAwesomeIcon icon={faTrash} />
-                  </Button>
-                </td>
+        {/* Conditional rendering based on view type */}
+        {viewType === 'table' ? (
+          <Table hover responsive>
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Location</th>
+                <th>Categories</th>
+                <th>Types</th>
+                <th>Proxy Types</th>
+                <th>Product Sets</th>
+                <th>Tags</th>
+                <th>Quantity</th>
+                <th>Actions</th>
               </tr>
-            ))}
-          </tbody>
-        </Table>
+            </thead>
+            <tbody>
+              {paginatedMinis.map(mini => (
+                <tr key={mini.id}>
+                  <td className="d-flex align-items-center" style={{ height: '40px' }}>
+                    {mini.image_path && (
+                      <img 
+                        src={mini.image_path} 
+                        alt={mini.name}
+                        style={{ 
+                          width: '40px', 
+                          height: '40px', 
+                          objectFit: 'contain',
+                          marginRight: '10px',
+                          cursor: 'pointer'
+                        }}
+                        onClick={() => handleImageClick(mini)}
+                        title="Click to view full image"
+                      />
+                    )}
+                    <a 
+                      href={`https://www.miniscollector.com/minis/gallery?title=${encodeURIComponent(mini.name)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-decoration-none"
+                    >
+                      {mini.name}
+                    </a>
+                  </td>
+                  <td>{mini.location}</td>
+                  <td>{mini.category_names?.split(',').join(', ')}</td>
+                  <td>{mini.type_names?.split(',').join(', ')}</td>
+                  <td>{mini.proxy_type_names?.split(',').join(', ')}</td>
+                  <td>{mini.product_set_names?.split(',').join(', ')}</td>
+                  <td>{mini.tag_names?.split(',').join(', ')}</td>
+                  <td>{mini.quantity}</td>
+                  <td className="text-nowrap">
+                    <TableButton
+                      icon={faImage}
+                      variant="info"
+                      onClick={() => handleImageClick(mini)}
+                      title="View Image"
+                      className="me-1"
+                      disabled={!mini.image_path}
+                    />
+                    <TableButton
+                      icon={faPencil}
+                      variant="primary"
+                      onClick={() => handleEditMini(mini)}
+                      title="Edit Mini"
+                      className="me-1"
+                    />
+                    <TableButton
+                      icon={faTrash}
+                      variant="danger"
+                      onClick={() => handleDeleteMini(mini.id)}
+                      title="Delete Mini"
+                    />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </Table>
+        ) : (
+          <MiniCardGrid
+            minis={paginatedMinis}
+            onEdit={handleEditMini}
+            onDelete={handleDeleteMini}
+            onImageClick={handleImageClick}
+          />
+        )}
       </div>
 
       {/* Add Mini Modal */}
       <Modal show={showAddModal} onHide={() => setShowAddModal(false)} size="lg">
-        <Modal.Header closeButton>
+        <Modal.Header closeButton className="bg-primary bg-opacity-10">
           <Modal.Title>Add New Mini</Modal.Title>
         </Modal.Header>
         <Modal.Body>
@@ -648,6 +829,7 @@ const MiniOverview = () => {
               <Card.Body>
                 <Row>
                   <Col md={3}>
+                    <h6 className="mb-2">Image</h6>
                     <div 
                       className="image-drop-zone"
                       style={{
@@ -773,205 +955,203 @@ const MiniOverview = () => {
               </Card.Body>
             </Card>
 
-            {/* Classification Card */}
+            {/* Combined Classification and Information Card */}
             <Card className="mb-3">
               <Card.Header className="bg-light d-flex align-items-center">
-                <h6 className="mb-0">Classification</h6>
+                <h6 className="mb-0">Classification & Information</h6>
               </Card.Header>
               <Card.Body>
                 <Row>
                   <Col md={4}>
                     <Form.Group className="mb-3">
-                      <Form.Label>Categories <span className="text-danger">*</span></Form.Label>
-                      <div className="position-relative">
-                        <Form.Control
-                          type="text"
-                          value={categorySearch}
-                          onChange={(e) => handleCategorySearch(e.target.value)}
-                          placeholder="Type to search for categories..."
-                          isInvalid={validationErrors.categories}
-                        />
-                        {filteredCategories.length > 0 && (
-                          <div className="position-absolute w-100 bg-white border rounded shadow-sm" 
-                               style={{ zIndex: 1000, maxHeight: '200px', overflowY: 'auto' }}>
-                            {filteredCategories.map(category => (
-                              <div
-                                key={category.id}
-                                className="dropdown-item-hover"
-                                onClick={() => handleAddCategory(category)}
-                              >
-                                {category.name}
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                        {validationErrors.categories && (
-                          <div className="text-danger small mt-1">
-                            At least one category is required
-                          </div>
-                        )}
-                      </div>
+                      <Form.Label>
+                        <FontAwesomeIcon icon={faLayerGroup} className="me-2 text-primary" />
+                        Categories <span className="text-danger">*</span>
+                      </Form.Label>
+                      <SearchableSelect
+                        items={categories}
+                        value={newMini?.categories || []}
+                        onChange={(category) => {
+                          if (!newMini?.categories.includes(category.id.toString())) {
+                            setNewMini({
+                              ...newMini,
+                              categories: [...(newMini?.categories || []), category.id.toString()]
+                            })
+                          }
+                        }}
+                        placeholder="Search categories..."
+                        isInvalid={validationErrors.categories}
+                      />
                       <div className="mt-2">
-                        {selectedCategories.map(category => (
-                          <span
-                            key={category.id}
-                            className="badge bg-primary me-1 mb-1"
-                            style={{ cursor: 'pointer' }}
-                            onClick={() => handleRemoveCategory(category.id)}
-                          >
-                            {category.name} ×
-                          </span>
-                        ))}
+                        {newMini?.categories?.map(catId => {
+                          const category = categories.find(c => c.id.toString() === catId)
+                          return category ? (
+                            <span
+                              key={category.id}
+                              className="badge bg-primary me-1 mb-1"
+                              style={{ cursor: 'pointer' }}
+                              onClick={() => {
+                                const updatedTypes = newMini.types.filter(id => id !== catId)
+                                setNewMini(prev => ({
+                                  ...prev,
+                                  types: updatedTypes,
+                                  // If no types remain, clear proxy types
+                                  proxy_types: updatedTypes.length === 0 ? [] : prev.proxy_types
+                                }))
+                                if (updatedTypes.length === 0) {
+                                  // Clear any selected proxy types from the UI
+                                  const proxyTypeElements = document.querySelectorAll('.proxy-type-badge')
+                                  proxyTypeElements.forEach(element => element.remove())
+                                }
+                              }}
+                            >
+                              {category.name} ×
+                            </span>
+                          ) : null
+                        })}
                       </div>
                     </Form.Group>
                   </Col>
                   <Col md={4}>
                     <Form.Group className="mb-3">
-                      <Form.Label>Types <span className="text-danger">*</span></Form.Label>
-                      <div className="position-relative">
-                        <Form.Control
-                          type="text"
-                          value={typeSearch}
-                          onChange={(e) => handleTypeSearch(e.target.value)}
-                          placeholder="Type to search for types..."
-                          disabled={selectedCategories.length === 0}
-                          isInvalid={validationErrors.types}
-                        />
-                        {filteredTypes.length > 0 && (
-                          <div className="position-absolute w-100 bg-white border rounded shadow-sm" 
-                               style={{ zIndex: 1000, maxHeight: '200px', overflowY: 'auto' }}>
-                            {filteredTypes.map(type => (
-                              <div
-                                key={type.id}
-                                className="dropdown-item-hover"
-                                onClick={() => handleAddType(type)}
-                              >
-                                {`${type.category_name}: ${type.name}`}
-                              </div>
-                            ))}
-                          </div>
+                      <Form.Label>
+                        <FontAwesomeIcon icon={faCube} className="me-2 text-primary" />
+                        Types <span className="text-danger">*</span>
+                      </Form.Label>
+                      <SearchableSelect
+                        items={types.filter(type => 
+                          newMini?.categories?.includes(type.category_id.toString())
                         )}
-                        {validationErrors.types && (
-                          <div className="text-danger small mt-1">
-                            At least one type is required
-                          </div>
-                        )}
-                      </div>
+                        value={newMini?.types || []}
+                        onChange={(type) => {
+                          if (!newMini?.types.includes(type.id.toString())) {
+                            setNewMini({
+                              ...newMini,
+                              types: [...(newMini?.types || []), type.id.toString()]
+                            })
+                          }
+                        }}
+                        placeholder="Search types..."
+                        renderOption={(type) => `${type.category_name}: ${type.name}`}
+                        isInvalid={validationErrors.types}
+                      />
                       <div className="mt-2">
-                        {selectedTypes.map(type => (
-                          <span
-                            key={type.id}
-                            className="badge bg-primary me-1 mb-1"
-                            style={{ cursor: 'pointer' }}
-                            onClick={() => handleRemoveType(type.id)}
-                          >
-                            {`${type.category_name}: ${type.name}`} ×
-                          </span>
-                        ))}
+                        {newMini?.types?.map(typeId => {
+                          const type = types.find(t => t.id.toString() === typeId)
+                          return type ? (
+                            <span
+                              key={type.id}
+                              className="badge bg-primary me-1 mb-1"
+                              style={{ cursor: 'pointer' }}
+                              onClick={() => {
+                                const updatedTypes = newMini.types.filter(id => id !== typeId)
+                                setNewMini(prev => ({
+                                  ...prev,
+                                  types: updatedTypes,
+                                  // If no types remain, clear proxy types
+                                  proxy_types: updatedTypes.length === 0 ? [] : prev.proxy_types
+                                }))
+                                if (updatedTypes.length === 0) {
+                                  // Clear any selected proxy types from the UI
+                                  const proxyTypeElements = document.querySelectorAll('.proxy-type-badge')
+                                  proxyTypeElements.forEach(element => element.remove())
+                                }
+                              }}
+                            >
+                              {`${type.category_name}: ${type.name}`} ×
+                            </span>
+                          ) : null
+                        })}
                       </div>
                     </Form.Group>
                   </Col>
                   <Col md={4}>
                     <Form.Group className="mb-3">
-                      <Form.Label>Proxy Types</Form.Label>
-                      <div className="position-relative">
-                        <Form.Control
-                          type="text"
-                          value={proxyTypeSearch}
-                          onChange={(e) => handleProxyTypeSearch(e.target.value)}
-                          placeholder="Type to search for proxy types..."
-                          disabled={selectedTypes.length === 0}
-                        />
-                        {filteredProxyTypes.length > 0 && (
-                          <div className="position-absolute w-100 bg-white border rounded shadow-sm" 
-                               style={{ zIndex: 1000, maxHeight: '200px', overflowY: 'auto' }}>
-                            {filteredProxyTypes.map(type => (
-                              <div
-                                key={type.id}
-                                className="dropdown-item-hover"
-                                onClick={() => handleAddProxyType(type)}
-                              >
-                                {`${type.category_name}: ${type.name}`}
-                              </div>
-                            ))}
-                          </div>
+                      <Form.Label>
+                        <FontAwesomeIcon icon={faExchangeAlt} className="me-2 text-primary" />
+                        Proxy Types
+                      </Form.Label>
+                      <SearchableSelect
+                        items={types.filter(type => 
+                          !newMini?.types?.includes(type.id.toString())
                         )}
-                      </div>
+                        value={newMini?.proxy_types || []}
+                        onChange={(type) => {
+                          if (!newMini?.proxy_types?.includes(type.id.toString())) {
+                            setNewMini({
+                              ...newMini,
+                              proxy_types: [...(newMini?.proxy_types || []), type.id.toString()]
+                            })
+                          }
+                        }}
+                        placeholder="Search proxy types..."
+                        renderOption={(type) => `${type.category_name}: ${type.name}`}
+                        disabled={!newMini?.types?.length}
+                      />
                       <div className="mt-2">
-                        {selectedProxyTypes.map(type => (
-                          <span
-                            key={type.id}
-                            className="badge bg-primary me-1 mb-1"
-                            style={{ cursor: 'pointer' }}
-                            onClick={() => handleRemoveProxyType(type.id)}
-                          >
-                            {`${type.category_name}: ${type.name}`} ×
-                          </span>
-                        ))}
+                        {newMini?.proxy_types?.map(typeId => {
+                          const type = types.find(t => t.id.toString() === typeId)
+                          return type ? (
+                            <span
+                              key={type.id}
+                              className="badge bg-primary me-1 mb-1"
+                              style={{ cursor: 'pointer' }}
+                              onClick={() => {
+                                const updatedTypes = newMini.types.filter(id => id !== typeId)
+                                setNewMini(prev => ({
+                                  ...prev,
+                                  types: updatedTypes,
+                                  // If no types remain, clear proxy types
+                                  proxy_types: updatedTypes.length === 0 ? [] : prev.proxy_types
+                                }))
+                                if (updatedTypes.length === 0) {
+                                  // Clear any selected proxy types from the UI
+                                  const proxyTypeElements = document.querySelectorAll('.proxy-type-badge')
+                                  proxyTypeElements.forEach(element => element.remove())
+                                }
+                              }}
+                            >
+                              {`${type.category_name}: ${type.name}`} ×
+                            </span>
+                          ) : null
+                        })}
                       </div>
                     </Form.Group>
                   </Col>
                 </Row>
-              </Card.Body>
-            </Card>
-
-            {/* Tags and Product Information Card */}
-            <Card className="mb-3">
-              <Card.Header className="bg-light d-flex align-items-center">
-                <h6 className="mb-0">Tags and Product Information</h6>
-              </Card.Header>
-              <Card.Body>
                 <Row>
                   <Col md={6}>
                     <Form.Group className="mb-3">
-                      <Form.Label>Tags</Form.Label>
-                      <div className="position-relative">
-                        <TagInput
-                          value={newMini.tags}
-                          onChange={(tags) => setNewMini({...newMini, tags})}
-                          existingTags={existingTags}
-                          placeholder="Type tag and press Enter or comma to add..."
-                        />
-                      </div>
-                      <div className="mt-2">
-                        {newMini.tags.map((tag, index) => (
-                          <span
-                            key={index}
-                            className="badge bg-primary me-1 mb-1"
-                            style={{ cursor: 'pointer' }}
-                            onClick={() => handleRemoveTag(tag)}
-                          >
-                            {tag} ×
-                          </span>
-                        ))}
-                      </div>
+                      <Form.Label>
+                        <FontAwesomeIcon icon={faTags} className="me-2 text-primary" />
+                        Tags
+                      </Form.Label>
+                      <TagInput
+                        value={newMini.tags}
+                        onChange={(tags) => setNewMini({...newMini, tags})}
+                        existingTags={existingTags}
+                        placeholder="Type tag and press Enter or comma to add..."
+                      />
                     </Form.Group>
                   </Col>
                   <Col md={6}>
                     <Form.Group className="mb-3">
-                      <Form.Label>Product Set</Form.Label>
-                      <div className="position-relative">
-                        <Form.Control
-                          type="text"
-                          value={productSetSearch}
-                          onChange={(e) => handleProductSetSearch(e.target.value)}
-                          placeholder="Type to search for product sets..."
-                        />
-                        {filteredProductSets.length > 0 && (
-                          <div className="position-absolute w-100 bg-white border rounded shadow-sm" 
-                               style={{ zIndex: 1000, maxHeight: '200px', overflowY: 'auto' }}>
-                            {filteredProductSets.map(set => (
-                              <div
-                                key={set.id}
-                                className="dropdown-item-hover"
-                                onClick={() => handleAddProductSet(set)}
-                              >
-                                {`${set.manufacturer_name} » ${set.product_line_name} » ${set.name}`}
-                              </div>
-                            ))}
-                          </div>
-                        )}
-                      </div>
+                      <Form.Label>
+                        <FontAwesomeIcon icon={faBox} className="me-2 text-primary" />
+                        Product Set
+                      </Form.Label>
+                      <SearchableSelect
+                        items={productSets}
+                        value={newMini?.product_sets || []}
+                        onChange={(set) => {
+                          setNewMini({
+                            ...newMini,
+                            product_sets: [set.id.toString()]
+                          })
+                        }}
+                        placeholder="Search product sets..."
+                        renderOption={(set) => `${set.manufacturer_name} » ${set.product_line_name} » ${set.name}`}
+                      />
                       <div className="mt-2">
                         {Array.isArray(newMini.product_sets) && newMini.product_sets.map(setId => {
                           const set = productSets?.find(s => s.id.toString() === setId);
@@ -998,7 +1178,11 @@ const MiniOverview = () => {
           <Button variant="secondary" onClick={() => setShowAddModal(false)}>
             Cancel
           </Button>
-          <Button variant="primary" onClick={handleAddMini}>
+          <Button 
+            variant="primary" 
+            onClick={handleAddMini}
+            disabled={!isValidMini(newMini)}
+          >
             Add Mini
           </Button>
         </Modal.Footer>
@@ -1184,10 +1368,18 @@ const MiniOverview = () => {
                               className="badge bg-primary me-1 mb-1"
                               style={{ cursor: 'pointer' }}
                               onClick={() => {
-                                setEditingMini({
-                                  ...editingMini,
-                                  categories: editingMini.categories.filter(id => id !== catId)
-                                })
+                                const updatedTypes = editingMini.types.filter(id => id !== catId)
+                                setEditingMini(prev => ({
+                                  ...prev,
+                                  types: updatedTypes,
+                                  // If no types remain, clear proxy types
+                                  proxy_types: updatedTypes.length === 0 ? [] : prev.proxy_types
+                                }))
+                                if (updatedTypes.length === 0) {
+                                  // Clear any selected proxy types from the UI
+                                  const proxyTypeElements = document.querySelectorAll('.proxy-type-badge')
+                                  proxyTypeElements.forEach(element => element.remove())
+                                }
                               }}
                             >
                               {category.name} ×
@@ -1226,10 +1418,18 @@ const MiniOverview = () => {
                               className="badge bg-primary me-1 mb-1"
                               style={{ cursor: 'pointer' }}
                               onClick={() => {
-                                setEditingMini({
-                                  ...editingMini,
-                                  types: editingMini.types.filter(id => id !== typeId)
-                                })
+                                const updatedTypes = editingMini.types.filter(id => id !== typeId)
+                                setEditingMini(prev => ({
+                                  ...prev,
+                                  types: updatedTypes,
+                                  // If no types remain, clear proxy types
+                                  proxy_types: updatedTypes.length === 0 ? [] : prev.proxy_types
+                                }))
+                                if (updatedTypes.length === 0) {
+                                  // Clear any selected proxy types from the UI
+                                  const proxyTypeElements = document.querySelectorAll('.proxy-type-badge')
+                                  proxyTypeElements.forEach(element => element.remove())
+                                }
                               }}
                             >
                               {`${type.category_name}: ${type.name}`} ×
@@ -1257,6 +1457,7 @@ const MiniOverview = () => {
                         }}
                         placeholder="Search proxy types..."
                         renderOption={(type) => `${type.category_name}: ${type.name}`}
+                        disabled={!editingMini?.types?.length}
                       />
                       <div className="mt-2">
                         {editingMini?.proxy_types?.map(typeId => {
@@ -1267,10 +1468,18 @@ const MiniOverview = () => {
                               className="badge bg-primary me-1 mb-1"
                               style={{ cursor: 'pointer' }}
                               onClick={() => {
-                                setEditingMini({
-                                  ...editingMini,
-                                  proxy_types: editingMini.proxy_types.filter(id => id !== typeId)
-                                })
+                                const updatedTypes = editingMini.types.filter(id => id !== typeId)
+                                setEditingMini(prev => ({
+                                  ...prev,
+                                  types: updatedTypes,
+                                  // If no types remain, clear proxy types
+                                  proxy_types: updatedTypes.length === 0 ? [] : prev.proxy_types
+                                }))
+                                if (updatedTypes.length === 0) {
+                                  // Clear any selected proxy types from the UI
+                                  const proxyTypeElements = document.querySelectorAll('.proxy-type-badge')
+                                  proxyTypeElements.forEach(element => element.remove())
+                                }
                               }}
                             >
                               {`${type.category_name}: ${type.name}`} ×
@@ -1348,7 +1557,11 @@ const MiniOverview = () => {
           <Button variant="secondary" onClick={() => setShowEditModal(false)}>
             Cancel
           </Button>
-          <Button variant="primary" onClick={handleUpdateMini}>
+          <Button 
+            variant="primary" 
+            onClick={handleUpdateMini}
+            disabled={!isValidMini(editingMini) || !hasChanges(editingMini, originalMini)}
+          >
             Save Changes
           </Button>
         </Modal.Footer>

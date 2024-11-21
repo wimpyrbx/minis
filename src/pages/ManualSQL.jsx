@@ -24,18 +24,22 @@ LIMIT 10;
 
 const ManualSQL = () => {
   const [sql, setSql] = useState('')
-  const [results, setResults] = useState([])
+  const [results, setResults] = useState(null)
   const [error, setError] = useState(null)
   const [isLoading, setIsLoading] = useState(false)
 
   const handleExecute = async () => {
     setIsLoading(true)
     setError(null)
-    setResults([])
+    setResults(null)
 
     try {
       const response = await api.post('/api/execute-sql', { sql })
-      setResults(response.data)
+      if (response.data.success) {
+        setResults(response.data)
+      } else {
+        setError(response.data.error || 'Unknown error occurred')
+      }
     } catch (err) {
       setError(err.response?.data?.error || err.message)
     } finally {
@@ -48,35 +52,48 @@ const ManualSQL = () => {
   }
 
   const renderResults = () => {
-    if (!results.length) return null
+    if (!results?.results?.length) return null
     
-    // Get column names from first result
-    const columns = Object.keys(results[0])
-
     return (
       <div className="mt-4">
-        <h5>Results</h5>
-        <Table hover responsive>
-          <thead>
-            <tr>
-              {columns.map(col => (
-                <th key={col}>{col}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {results.map((row, i) => (
-              <tr key={i}>
-                {columns.map(col => (
-                  <td key={col}>{row[col]?.toString()}</td>
-                ))}
-              </tr>
-            ))}
-          </tbody>
-        </Table>
-        <small className="text-muted">
-          {results.length} row(s) returned
-        </small>
+        {results.results.map((result, index) => (
+          <div key={index} className="mb-4">
+            <h5>Result {index + 1}</h5>
+            {result.type === 'SELECT' ? (
+              <>
+                <Table hover responsive>
+                  <thead>
+                    <tr>
+                      {result.rows.length > 0 && Object.keys(result.rows[0]).map(col => (
+                        <th key={col}>{col}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {result.rows.map((row, i) => (
+                      <tr key={i}>
+                        {Object.values(row).map((value, j) => (
+                          <td key={j}>{value?.toString()}</td>
+                        ))}
+                      </tr>
+                    ))}
+                  </tbody>
+                </Table>
+                <small className="text-muted">
+                  {result.rowCount} row(s) returned
+                </small>
+              </>
+            ) : (
+              <div className="alert alert-info">
+                {result.statement}<br/>
+                Changes: {result.changes}, Last ID: {result.lastID || 'N/A'}
+              </div>
+            )}
+          </div>
+        ))}
+        <div className="alert alert-success">
+          {results.message}
+        </div>
       </div>
     )
   }

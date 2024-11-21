@@ -1,0 +1,13 @@
+/* Add these styles for disabled dropdowns */
+select:disabled,
+.form-select:disabled {
+  background-color: #e9ecef !important;
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+/* Style for the disabled dropdown arrow */
+select:disabled,
+.form-select:disabled {
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23999' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e") !important;
+} 

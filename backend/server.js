@@ -149,7 +149,19 @@ async function initDatabase() {
           PRIMARY KEY (mini_id, type_id)
       );`,
       `CREATE INDEX IF NOT EXISTS idx_mini_to_proxy_types_mini ON mini_to_proxy_types(mini_id);`,
-      `CREATE INDEX IF NOT EXISTS idx_mini_to_proxy_types_type ON mini_to_proxy_types(type_id);`
+      `CREATE INDEX IF NOT EXISTS idx_mini_to_proxy_types_type ON mini_to_proxy_types(type_id);`,
+
+      `CREATE TABLE IF NOT EXISTS settings (
+          settings_id INTEGER PRIMARY KEY AUTOINCREMENT,
+          setting_name TEXT NOT NULL UNIQUE,
+          setting_value TEXT NOT NULL
+      );`,
+
+      `INSERT OR IGNORE INTO settings (setting_name, setting_value) 
+       VALUES ('collection_show_entries_per_page', '10');`,
+       
+      `INSERT OR IGNORE INTO settings (setting_name, setting_value) 
+       VALUES ('collection_viewtype', 'table');`
     ]
 
     // Execute each statement separately
@@ -209,6 +221,14 @@ app.get('/api/database/:table', async (req, res) => {
 )`
       }
       records = await db.all('SELECT * FROM sqlite_sequence')
+    } else if (table === 'settings') {
+      // Special handling for settings table
+      schema = await db.get(`
+        SELECT sql 
+        FROM sqlite_master 
+        WHERE type='table' AND name=?
+      `, [table])
+      records = await db.all('SELECT settings_id, setting_name, setting_value FROM settings')
     } else {
       // Get table schema for regular tables
       schema = await db.get(`
@@ -255,7 +275,7 @@ app.get('/api/database/:table', async (req, res) => {
   }
 })
 
-// Add this endpoint to handle SQL execution
+// Update the SQL execution endpoint
 app.post('/api/execute-sql', async (req, res) => {
   try {
     const { sql } = req.body
@@ -267,19 +287,40 @@ app.post('/api/execute-sql', async (req, res) => {
     
     // Execute each statement
     for (const statement of statements) {
-      if (statement.trim().toLowerCase().startsWith('select')) {
+      const trimmedStatement = statement.trim()
+      if (!trimmedStatement) continue
+
+      if (trimmedStatement.toLowerCase().startsWith('select')) {
         // For SELECT queries, return the results
-        const result = await db.all(statement)
-        results = result // Return results of last SELECT
+        const result = await db.all(trimmedStatement)
+        results.push({
+          type: 'SELECT',
+          rows: result,
+          rowCount: result.length
+        })
       } else {
-        // For other queries (INSERT, UPDATE, etc), execute and continue
-        await db.exec(statement)
+        // For other queries (INSERT, UPDATE, etc), execute and return affected rows
+        const result = await db.run(trimmedStatement)
+        results.push({
+          type: 'EXECUTE',
+          statement: trimmedStatement.split('\n')[0], // First line of statement
+          changes: result.changes || 0,
+          lastID: result.lastID || null
+        })
       }
     }
     
-    res.json(results)
+    res.json({
+      success: true,
+      results: results,
+      message: `Successfully executed ${statements.length} statement(s)`
+    })
   } catch (error) {
-    res.status(500).json({ error: error.message })
+    res.status(500).json({ 
+      success: false,
+      error: error.message,
+      results: []
+    })
   }
 })
 
@@ -1168,3 +1209,36 @@ app.get('/api/minis/:id/relationships', async (req, res) => {
 
 // Update the static file serving
 app.use('/images', express.static(path.join(__dirname, '..', 'public', 'images'))) 
+
+// Add settings endpoints
+app.get('/api/settings', async (req, res) => {
+  try {
+    const settings = await db.all('SELECT settings_id, setting_name, setting_value FROM settings')
+    // Convert to key-value object
+    const settingsObj = settings.reduce((acc, curr) => {
+      acc[curr.setting_name] = curr.setting_value
+      return acc
+    }, {})
+    res.json(settingsObj)
+  } catch (error) {
+    res.status(500).json({ error: error.message })
+  }
+})
+
+app.put('/api/settings/:name', async (req, res) => {
+  try {
+    const { name } = req.params
+    const { value } = req.body
+    const result = await db.run(
+      'INSERT OR REPLACE INTO settings (setting_name, setting_value) VALUES (?, ?)',
+      [name, value]
+    )
+    res.json({ 
+      settings_id: result.lastID,
+      setting_name: name, 
+      setting_value: value 
+    })
+  } catch (error) {
+    res.status(500).json({ error: error.message })
+  }
+}) 

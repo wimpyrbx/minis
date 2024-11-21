@@ -3,6 +3,7 @@ import { Container, Row, Col, Form, Button, Table, Alert, Card, Modal } from 're
 import { faBoxes, faTrash, faIndustry, faBoxArchive, faPencil } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { api } from '../database/db'
+import TableButton from '../components/TableButton'
 
 const ProductAdmin = () => {
   const [manufacturers, setManufacturers] = useState([])
@@ -223,24 +224,22 @@ const ProductAdmin = () => {
                     <tr key={manufacturer.id}>
                       <td>{manufacturer.name}</td>
                       <td className="text-nowrap">
-                        <Button
+                        <TableButton
+                          icon={faPencil}
                           variant="primary"
-                          size="sm"
-                          className="me-2"
                           onClick={() => {
                             setEditingManufacturer(manufacturer)
                             setShowManufacturerModal(true)
                           }}
-                        >
-                          <FontAwesomeIcon icon={faPencil} />
-                        </Button>
-                        <Button
+                          title="Edit Company"
+                          className="me-2"
+                        />
+                        <TableButton
+                          icon={faTrash}
                           variant="danger"
-                          size="sm"
                           onClick={() => handleDeleteManufacturer(manufacturer.id)}
-                        >
-                          <FontAwesomeIcon icon={faTrash} />
-                        </Button>
+                          title="Delete Company"
+                        />
                       </td>
                     </tr>
                   ))}
@@ -311,24 +310,22 @@ const ProductAdmin = () => {
                       <td>{line.name}</td>
                       <td>{line.manufacturer_name}</td>
                       <td className="text-nowrap">
-                        <Button
+                        <TableButton
+                          icon={faPencil}
                           variant="primary"
-                          size="sm"
-                          className="me-2"
                           onClick={() => {
                             setEditingProductLine(line)
                             setShowProductLineModal(true)
                           }}
-                        >
-                          <FontAwesomeIcon icon={faPencil} />
-                        </Button>
-                        <Button
+                          title="Edit Product Line"
+                          className="me-2"
+                        />
+                        <TableButton
+                          icon={faTrash}
                           variant="danger"
-                          size="sm"
                           onClick={() => handleDeleteProductLine(line.id)}
-                        >
-                          <FontAwesomeIcon icon={faTrash} />
-                        </Button>
+                          title="Delete Product Line"
+                        />
                       </td>
                     </tr>
                   ))}
@@ -419,24 +416,22 @@ const ProductAdmin = () => {
                       <td>{set.manufacturer_name}</td>
                       <td>{set.product_line_name}</td>
                       <td className="text-nowrap">
-                        <Button
+                        <TableButton
+                          icon={faPencil}
                           variant="primary"
-                          size="sm"
-                          className="me-2"
                           onClick={() => {
                             setEditingProductSet(set)
                             setShowProductSetModal(true)
                           }}
-                        >
-                          <FontAwesomeIcon icon={faPencil} />
-                        </Button>
-                        <Button
+                          title="Edit Product Set"
+                          className="me-2"
+                        />
+                        <TableButton
+                          icon={faTrash}
                           variant="danger"
-                          size="sm"
                           onClick={() => handleDeleteProductSet(set.id)}
-                        >
-                          <FontAwesomeIcon icon={faTrash} />
-                        </Button>
+                          title="Delete Product Set"
+                        />
                       </td>
                     </tr>
                   ))}
