@@ -78,6 +78,13 @@ const MiniOverview = () => {
   // Add new state for view type
   const [viewType, setViewType] = useState('table')
 
+  // **New: Selected states for Edit Modal**
+  const [selectedCategoriesEdit, setSelectedCategoriesEdit] = useState([])
+  const [selectedTypesEdit, setSelectedTypesEdit] = useState([])
+  const [selectedProxyTypesEdit, setSelectedProxyTypesEdit] = useState([])
+  const [selectedTagsEdit, setSelectedTagsEdit] = useState([])
+  const [selectedProductSetsEdit, setSelectedProductSetsEdit] = useState([])
+
   // Add useEffect to load view type preference
   useEffect(() => {
     const loadSettings = async () => {
@@ -606,30 +613,155 @@ const MiniOverview = () => {
     }
   }
 
-  // Update the handleEditMini function
+  // **Updated: handleEditMini Function**
   const handleEditMini = (mini) => {
-    setEditingMini(mini)
-    setPaintedBy(mini.painted_by || 'prepainted') // Set painted_by from existing mini or default to prepainted
+    // Store the original mini data for comparison
+    setOriginalMini(mini)
+    
+    // Set the editing mini with all its properties
+    setEditingMini({
+      ...mini,
+      // Ensure all properties are present and correctly typed
+      categories: mini.categories || [],
+      types: mini.types || [],
+      proxy_types: mini.proxy_types || [],
+      tags: mini.tags || [],
+      product_sets: mini.product_sets || [],
+      painted_by: mini.painted_by || 'prepainted',
+      quantity: mini.quantity || 1,
+      description: mini.description || ''
+    })
+
+    // **Initialize selected states for the edit form**
+    setSelectedCategoriesEdit(
+      categories.filter(cat => mini.categories?.includes(cat.id.toString()))
+    )
+    setSelectedTypesEdit(
+      types.filter(type => mini.types?.includes(type.id.toString()))
+    )
+    setSelectedProxyTypesEdit(
+      types.filter(type => mini.proxy_types?.includes(type.id.toString()))
+    )
+    setSelectedTagsEdit(mini.tags || [])
+    setSelectedProductSetsEdit(mini.product_sets || [])
+
+    // Reset validation errors
+    setValidationErrors({
+      name: false,
+      location: false,
+      categories: false,
+      types: false
+    })
+
     setShowEditModal(true)
   }
 
-  // Update the handleUpdateMini function
+  // **New: useEffect to Sync editingMini with Selected States**
+  useEffect(() => {
+    if (editingMini) {
+      setSelectedCategoriesEdit(
+        categories.filter(cat => editingMini.categories?.includes(cat.id.toString()))
+      )
+      setSelectedTypesEdit(
+        types.filter(type => editingMini.types?.includes(type.id.toString()))
+      )
+      setSelectedProxyTypesEdit(
+        types.filter(type => editingMini.proxy_types?.includes(type.id.toString()))
+      )
+      setSelectedTagsEdit(editingMini.tags || [])
+      setSelectedProductSetsEdit(editingMini.product_sets || [])
+    }
+  }, [editingMini, categories, types])
+
+  // **Updated: handleRemoveCategoryEdit Function**
+  const handleRemoveCategoryEdit = (categoryId) => {
+    setSelectedCategoriesEdit(prev => 
+      prev.filter(cat => cat.id !== categoryId)
+    )
+    setEditingMini(prev => ({
+      ...prev,
+      categories: prev.categories.filter(id => id !== categoryId.toString()),
+      // Clear types that belong to the removed category
+      types: prev.types.filter(typeId => {
+        const type = types.find(t => t.id.toString() === typeId)
+        return type && type.category_id.toString() !== categoryId.toString()
+      }),
+      // Clear proxy types if no types remain
+      proxy_types: prev.types.length === 0 ? [] : prev.proxy_types
+    }))
+  }
+
+  // **Updated: handleRemoveTypeEdit Function**
+  const handleRemoveTypeEdit = (typeId) => {
+    setSelectedTypesEdit(prev => 
+      prev.filter(type => type.id !== typeId)
+    )
+    setEditingMini(prev => {
+      const updatedTypes = prev.types.filter(id => id !== typeId.toString())
+      return {
+        ...prev,
+        types: updatedTypes,
+        // Clear proxy types if no types remain
+        proxy_types: updatedTypes.length === 0 ? [] : prev.proxy_types
+      }
+    })
+    
+    if (selectedTypesEdit.length <= 1) { // Will be 0 after removal
+      setSelectedProxyTypesEdit([])
+    }
+  }
+
+  // **Updated: handleRemoveProxyTypeEdit Function**
+  const handleRemoveProxyTypeEdit = (typeId) => {
+    setSelectedProxyTypesEdit(prev => 
+      prev.filter(type => type.id !== typeId)
+    )
+    setEditingMini(prev => ({
+      ...prev,
+      proxy_types: prev.proxy_types.filter(id => id !== typeId.toString())
+    }))
+  }
+
+  // **Updated: handleRemoveProductSetEdit Function**
+  const handleRemoveProductSetEdit = (setId) => {
+    setSelectedProductSetsEdit(prev => 
+      prev.filter(set => set.id !== setId)
+    )
+    setEditingMini(prev => ({
+      ...prev,
+      product_sets: prev.product_sets.filter(id => id !== setId.toString())
+    }))
+  }
+
+  // **Updated: handleUpdateMini Function**
   const handleUpdateMini = async () => {
     try {
       // Validate required fields
       const errors = {
         name: !editingMini.name.trim(),
         location: !editingMini.location.trim(),
-        categories: !editingMini.categories?.length,
-        types: !editingMini.types?.length
+        categories: !(selectedCategoriesEdit && selectedCategoriesEdit.length > 0),
+        types: !(selectedTypesEdit && selectedTypesEdit.length > 0)
       }
 
+      setValidationErrors(errors)
+
       if (Object.values(errors).some(Boolean)) {
-        setValidationErrors(errors)
         return
       }
 
-      const response = await api.put(`/api/minis/${editingMini.id}`, editingMini)
+      const miniToUpdate = {
+        ...editingMini,
+        name: editingMini.name.trim(),
+        location: editingMini.location.trim(),
+        categories: selectedCategoriesEdit.map(cat => cat.id.toString()),
+        types: selectedTypesEdit.map(type => type.id.toString()),
+        proxy_types: selectedProxyTypesEdit.map(type => type.id.toString()),
+        tags: selectedTagsEdit,
+        product_sets: selectedProductSetsEdit.map(set => set.id.toString()),
+      }
+
+      const response = await api.put(`/api/minis/${editingMini.id}`, miniToUpdate)
       
       // Add timestamp to image URLs to bust cache
       const updatedMini = {
@@ -714,7 +846,6 @@ const MiniOverview = () => {
 
   const handleCloseModal = () => {
     setShowAddModal(false)
-    setPaintedBy('prepainted') // Reset to prepainted
     // ... rest of your reset logic ...
   }
 
@@ -1313,14 +1444,7 @@ const MiniOverview = () => {
                         onChange={(e) => {
                           const file = e.target.files[0]
                           if (file) {
-                            const reader = new FileReader()
-                            reader.onload = (e) => {
-                              setEditingMini({
-                                ...editingMini,
-                                image_path: e.target.result
-                              })
-                            }
-                            reader.readAsDataURL(file)
+                            handleImageUpload(file)
                           }
                         }}
                       />
@@ -1364,6 +1488,42 @@ const MiniOverview = () => {
                       </Col>
                       <Col md={6}>
                         <Form.Group>
+                          <Form.Label>Painted By</Form.Label>
+                          <div className="d-flex gap-3">
+                            <Form.Check
+                              type="radio"
+                              id="painted-prepainted-edit"
+                              label="Pre-painted"
+                              name="paintedByEdit"
+                              value="prepainted"
+                              checked={editingMini?.painted_by === 'prepainted'}
+                              onChange={(e) => setEditingMini({...editingMini, painted_by: e.target.value})}
+                            />
+                            <Form.Check
+                              type="radio"
+                              id="painted-self-edit"
+                              label="Self"
+                              name="paintedByEdit"
+                              value="self"
+                              checked={editingMini?.painted_by === 'self'}
+                              onChange={(e) => setEditingMini({...editingMini, painted_by: e.target.value})}
+                            />
+                            <Form.Check
+                              type="radio"
+                              id="painted-other-edit"
+                              label="Other"
+                              name="paintedByEdit"
+                              value="other"
+                              checked={editingMini?.painted_by === 'other'}
+                              onChange={(e) => setEditingMini({...editingMini, painted_by: e.target.value})}
+                            />
+                          </div>
+                        </Form.Group>
+                      </Col>
+                    </Row>
+                    <Row className="mt-3">
+                      <Col md={6}>
+                        <Form.Group>
                           <Form.Label>Location <span className="text-danger">*</span></Form.Label>
                           <Form.Control
                             type="text"
@@ -1379,9 +1539,7 @@ const MiniOverview = () => {
                           )}
                         </Form.Group>
                       </Col>
-                    </Row>
-                    <Row className="mt-3">
-                      <Col>
+                      <Col md={6}>
                         <Form.Group>
                           <Form.Label>Description</Form.Label>
                           <Form.Control
@@ -1421,27 +1579,24 @@ const MiniOverview = () => {
                       <Form.Label>Categories <span className="text-danger">*</span></Form.Label>
                       <SearchableSelect
                         items={categories}
-                        value={editingMini?.categories || []}
+                        value={selectedCategoriesEdit}
                         onChange={(category) => {
-                          if (!editingMini?.categories.includes(category.id.toString())) {
-                            setEditingMini({
-                              ...editingMini,
-                              categories: [...(editingMini?.categories || []), category.id.toString()]
-                            })
+                          if (!selectedCategoriesEdit.includes(category.id.toString())) {
+                            setSelectedCategoriesEdit([...selectedCategoriesEdit, category.id.toString()])
                           }
                         }}
                         placeholder="Search categories..."
                         isInvalid={validationErrors.categories}
                       />
                       <div className="mt-2">
-                        {editingMini?.categories?.map(catId => {
+                        {selectedCategoriesEdit.map(catId => {
                           const category = categories.find(c => c.id.toString() === catId)
                           return category ? (
                             <span
                               key={category.id}
                               className="badge bg-primary me-1 mb-1"
                               style={{ cursor: 'pointer' }}
-                              onClick={() => handleRemoveCategory(category.id)}
+                              onClick={() => handleRemoveCategoryEdit(category.id)}
                             >
                               {category.name} ×
                             </span>
@@ -1455,15 +1610,12 @@ const MiniOverview = () => {
                       <Form.Label>Types <span className="text-danger">*</span></Form.Label>
                       <SearchableSelect
                         items={types.filter(type => 
-                          editingMini?.categories?.includes(type.category_id.toString())
+                          selectedCategoriesEdit.includes(type.category_id.toString())
                         )}
-                        value={editingMini?.types || []}
+                        value={selectedTypesEdit}
                         onChange={(type) => {
-                          if (!editingMini?.types.includes(type.id.toString())) {
-                            setEditingMini({
-                              ...editingMini,
-                              types: [...(editingMini?.types || []), type.id.toString()]
-                            })
+                          if (!selectedTypesEdit.includes(type.id.toString())) {
+                            setSelectedTypesEdit([...selectedTypesEdit, type.id.toString()])
                           }
                         }}
                         placeholder="Search types..."
@@ -1471,23 +1623,14 @@ const MiniOverview = () => {
                         isInvalid={validationErrors.types}
                       />
                       <div className="mt-2">
-                        {editingMini?.types?.map(typeId => {
+                        {selectedTypesEdit.map(typeId => {
                           const type = types.find(t => t.id.toString() === typeId)
                           return type ? (
                             <span
                               key={type.id}
                               className="badge bg-primary me-1 mb-1"
                               style={{ cursor: 'pointer' }}
-                              onClick={() => {
-                                // Remove the proxy type
-                                setEditingMini(prev => ({
-                                  ...prev,
-                                  proxy_types: prev.proxy_types.filter(id => id !== typeId)
-                                }))
-                                setSelectedProxyTypes(prev => 
-                                  prev.filter(t => t.id !== type.id)
-                                )
-                              }}
+                              onClick={() => handleRemoveTypeEdit(type.id)}
                             >
                               {`${type.category_name}: ${type.name}`} ×
                             </span>
@@ -1501,39 +1644,27 @@ const MiniOverview = () => {
                       <Form.Label>Proxy Types</Form.Label>
                       <SearchableSelect
                         items={types.filter(type => 
-                          !editingMini?.types?.includes(type.id.toString())
+                          !selectedTypesEdit.includes(type.id.toString())
                         )}
-                        value={editingMini?.proxy_types || []}
+                        value={selectedProxyTypesEdit}
                         onChange={(type) => {
-                          if (!editingMini?.proxy_types?.includes(type.id.toString())) {
-                            setEditingMini({
-                              ...editingMini,
-                              proxy_types: [...(editingMini?.proxy_types || []), type.id.toString()]
-                            })
+                          if (!selectedProxyTypesEdit.includes(type.id.toString())) {
+                            setSelectedProxyTypesEdit([...selectedProxyTypesEdit, type.id.toString()])
                           }
                         }}
                         placeholder="Search proxy types..."
                         renderOption={(type) => `${type.category_name}: ${type.name}`}
-                        disabled={!editingMini?.types?.length}
+                        disabled={!selectedTypesEdit.length}
                       />
                       <div className="mt-2">
-                        {editingMini?.proxy_types?.map(typeId => {
+                        {selectedProxyTypesEdit.map(typeId => {
                           const type = types.find(t => t.id.toString() === typeId)
                           return type ? (
                             <span
                               key={type.id}
                               className="badge bg-primary me-1 mb-1"
                               style={{ cursor: 'pointer' }}
-                              onClick={() => {
-                                // Remove the proxy type
-                                setEditingMini(prev => ({
-                                  ...prev,
-                                  proxy_types: prev.proxy_types.filter(id => id !== typeId)
-                                }))
-                                setSelectedProxyTypes(prev => 
-                                  prev.filter(t => t.id !== type.id)
-                                )
-                              }}
+                              onClick={() => handleRemoveProxyTypeEdit(type.id)}
                             >
                               {`${type.category_name}: ${type.name}`} ×
                             </span>
@@ -1557,8 +1688,8 @@ const MiniOverview = () => {
                     <Form.Group className="mb-3">
                       <Form.Label>Tags</Form.Label>
                       <TagInput
-                        value={editingMini?.tags || []}
-                        onChange={(tags) => setEditingMini({...editingMini, tags})}
+                        value={selectedTagsEdit}
+                        onChange={(tags) => setSelectedTagsEdit(tags)}
                         existingTags={existingTags}
                         placeholder="Type tag and press Enter or comma to add..."
                       />
@@ -1569,30 +1700,24 @@ const MiniOverview = () => {
                       <Form.Label>Product Set</Form.Label>
                       <SearchableSelect
                         items={productSets}
-                        value={editingMini?.product_sets || []}
+                        value={selectedProductSetsEdit}
                         onChange={(set) => {
-                          setEditingMini({
-                            ...editingMini,
-                            product_sets: [set.id.toString()]
-                          })
+                          if (!selectedProductSetsEdit.includes(set.id.toString())) {
+                            setSelectedProductSetsEdit([set.id.toString()])
+                          }
                         }}
                         placeholder="Search product sets..."
                         renderOption={(set) => `${set.manufacturer_name} » ${set.product_line_name} » ${set.name}`}
                       />
                       <div className="mt-2">
-                        {editingMini?.product_sets?.map(setId => {
+                        {selectedProductSetsEdit.map(setId => {
                           const set = productSets.find(s => s.id.toString() === setId)
                           return set ? (
                             <span
                               key={set.id}
                               className="badge bg-primary me-1 mb-1"
                               style={{ cursor: 'pointer' }}
-                              onClick={() => {
-                                setEditingMini({
-                                  ...editingMini,
-                                  product_sets: editingMini.product_sets.filter(id => id !== setId)
-                                })
-                              }}
+                              onClick={() => handleRemoveProductSetEdit(set.id)}
                             >
                               {`${set.manufacturer_name} » ${set.product_line_name} » ${set.name}`} ×
                             </span>
