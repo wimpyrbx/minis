@@ -173,8 +173,6 @@ const MinisAdmin = () => {
     return type.name.trim() !== '' && type.category_id !== ''
   }
 
-  if (loading) return <div>Loading...</div>
-
   return (
     <Container fluid className="content">
       <Card className="mb-4">

@@ -8,7 +8,7 @@ import App from './App.jsx'
 // Test database connection on startup
 testConnection().then(connected => {
   if (connected) {
-    console.log('Successfully connected to database')
+    //console.log('Successfully connected to database')
   } else {
     console.error('Failed to connect to database')
   }

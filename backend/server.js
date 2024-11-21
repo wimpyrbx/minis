@@ -1099,6 +1099,15 @@ app.put('/api/minis/:id', async (req, res) => {
       }
     }
 
+    // Clean up unused tags
+    await db.run(`
+      DELETE FROM tags 
+      WHERE id NOT IN (
+        SELECT DISTINCT tag_id 
+        FROM mini_to_tags
+      )
+    `)
+
     // Insert product sets
     if (product_sets?.length > 0) {
       console.log('Inserting updated product sets:', product_sets)
@@ -1238,6 +1247,23 @@ app.put('/api/settings/:name', async (req, res) => {
       setting_name: name, 
       setting_value: value 
     })
+  } catch (error) {
+    res.status(500).json({ error: error.message })
+  }
+}) 
+
+// Add this new endpoint to clean up unused tags
+app.delete('/api/tags/cleanup', async (req, res) => {
+  try {
+    // Delete tags that aren't associated with any minis
+    await db.run(`
+      DELETE FROM tags 
+      WHERE id NOT IN (
+        SELECT DISTINCT tag_id 
+        FROM mini_to_tags
+      )
+    `)
+    res.status(204).send()
   } catch (error) {
     res.status(500).json({ error: error.message })
   }

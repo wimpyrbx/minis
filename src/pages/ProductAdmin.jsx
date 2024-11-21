@@ -229,8 +229,6 @@ const ProductAdmin = () => {
     }
   };
 
-  if (loading) return <div>Loading...</div>
-
   return (
     <Container fluid className="content">
       <Card className="mb-4">

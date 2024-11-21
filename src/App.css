@@ -3,6 +3,8 @@
   margin: 0;
   padding: 0;
   text-align: left;
+  min-height: 100vh;
+  background-color: var(--bs-body-bg);
 }
 
 /* Table styles */
@@ -88,13 +90,13 @@
 }
 
 [data-bs-theme="light"] .card {
-  background-color: white;
-  border-color: #dee2e6;
+  background-color: var(--bs-card-bg);
+  border-color: var(--bs-border-color);
 }
 
 [data-bs-theme="dark"] .card {
-  background-color: #2b2f36;
-  border-color: #454d55;
+  background-color: var(--bs-card-bg);
+  border-color: var(--bs-border-color);
 }
 
 .card-header {

@@ -9,7 +9,7 @@ export const api = axios.create({
 export const getDatabase = async () => {
   try {
     const response = await api.get('/status')
-    console.log('Database connection status:', response.data)
+    //console.log('Database connection status:', response.data)
     return response.data
   } catch (error) {
     console.error('Database connection error:', error)
