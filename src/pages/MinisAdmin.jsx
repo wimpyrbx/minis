@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react'
-import { Container, Row, Col, Form, Button, Table, Alert, Card, Modal } from 'react-bootstrap'
+import { Container, Row, Col, Form, Button, Alert, Card, Modal } from 'react-bootstrap'
 import { faCubes, faTrash, faLayerGroup, faCube, faPencil, faPlus } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { api } from '../database/db'
 import TableButton from '../components/TableButton'
+import CustomTable from '../components/Table/Table'
 
 const MinisAdmin = () => {
   const [categories, setCategories] = useState([])
@@ -20,6 +21,43 @@ const MinisAdmin = () => {
   const [showTypeModal, setShowTypeModal] = useState(false)
   const [editingCategory, setEditingCategory] = useState(null)
   const [editingType, setEditingType] = useState(null)
+
+  // Add columns definition
+  const columns = [
+    { key: 'name', label: 'Name' },
+    { key: 'image_path', label: 'Image Path' },
+    { key: 'actions', label: '', className: 'actions-cell' }
+  ];
+
+  // Add renderCell function
+  const renderCell = (row, column) => {
+    switch (column.key) {
+      case 'name':
+        return row.name;
+      case 'image_path':
+        return row.image_path;
+      case 'actions':
+        return (
+          <>
+            <TableButton
+              icon={faPencil}
+              variant="primary"
+              onClick={() => openCategoryModal(row)}
+              title="Edit Category"
+              className="me-2"
+            />
+            <TableButton
+              icon={faTrash}
+              variant="danger"
+              onClick={() => handleDeleteCategory(row.id)}
+              title="Delete Category"
+            />
+          </>
+        );
+      default:
+        return row[column.key];
+    }
+  };
 
   useEffect(() => {
     fetchData()
@@ -198,39 +236,11 @@ const MinisAdmin = () => {
                 </Row>
               </Form>
 
-              <Table hover className="table-with-actions">
-                <thead>
-                  <tr>
-                    <th>Name</th>
-                    <th>Image Path</th>
-                    <th className="action-column"></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {categories.map(category => (
-                    <tr key={category.id}>
-                      <td>{category.name}</td>
-                      <td>{category.image_path}</td>
-                      <td className="action-column">
-                        <div className="action-column-content">
-                          <TableButton
-                            icon={faPencil}
-                            variant="primary"
-                            onClick={() => openCategoryModal(category)}
-                            title="Edit Category"
-                          />
-                          <TableButton
-                            icon={faTrash}
-                            variant="danger"
-                            onClick={() => handleDeleteCategory(category.id)}
-                            title="Delete Category"
-                          />
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </Table>
+              <CustomTable
+                columns={columns}
+                data={categories}
+                renderCell={renderCell}
+              />
             </Card.Body>
           </Card>
         </Col>
@@ -298,40 +308,45 @@ const MinisAdmin = () => {
                 </Row>
               </Form>
 
-              <Table hover className="table-with-actions">
-                <thead>
-                  <tr>
-                    <th>Name</th>
-                    <th>Category</th>
-                    <th>Image Path</th>
-                    <th width="100"></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {types.map(type => (
-                    <tr key={type.id}>
-                      <td>{type.name}</td>
-                      <td>{type.category_name}</td>
-                      <td>{type.image_path}</td>
-                      <td className="text-nowrap">
-                        <TableButton
-                          icon={faPencil}
-                          variant="primary"
-                          onClick={() => openTypeModal(type)}
-                          title="Edit Type"
-                          className="me-2"
-                        />
-                        <TableButton
-                          icon={faTrash}
-                          variant="danger"
-                          onClick={() => handleDeleteType(type.id)}
-                          title="Delete Type"
-                        />
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </Table>
+              <CustomTable
+                columns={[
+                  { key: 'name', label: 'Name' },
+                  { key: 'category', label: 'Category' },
+                  { key: 'image_path', label: 'Image Path' },
+                  { key: 'actions', label: '', className: 'actions-cell' }
+                ]}
+                data={types}
+                renderCell={(row, column) => {
+                  switch (column.key) {
+                    case 'name':
+                      return row.name;
+                    case 'category':
+                      return row.category_name;
+                    case 'image_path':
+                      return row.image_path;
+                    case 'actions':
+                      return (
+                        <>
+                          <TableButton
+                            icon={faPencil}
+                            variant="primary"
+                            onClick={() => openTypeModal(row)}
+                            title="Edit Type"
+                            className="me-2"
+                          />
+                          <TableButton
+                            icon={faTrash}
+                            variant="danger"
+                            onClick={() => handleDeleteType(row.id)}
+                            title="Delete Type"
+                          />
+                        </>
+                      );
+                    default:
+                      return row[column.key];
+                  }
+                }}
+              />
             </Card.Body>
           </Card>
         </Col>

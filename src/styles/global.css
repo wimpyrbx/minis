@@ -163,31 +163,6 @@ select:disabled,
   border-color: #198754 !important;
 }
 
-/* Update table action columns */
-.action-column {
-  width: auto !important;  /* Allow the column to adjust based on content */
-  white-space: nowrap;
-  padding-left: 4px !important;
-  padding-right: 4px !important;
-}
-
-.action-column-content {
-  display: flex;
-  gap: 0.25rem;
-  justify-content: flex-end;  /* Ensure buttons are aligned to the right */
-  min-width: max-content;     /* Ensure content doesn't wrap */
-}
-
-/* Ensure table respects column widths */
-.table {
-  table-layout: auto;  /* Allow table to adjust based on content */
-}
-
-/* Add this for tables that need action columns */
-.table-with-actions {
-  table-layout: auto !important;
-}
-
 /* Add these styles for disabled select placeholders */
 select:disabled,
 .form-select:disabled {

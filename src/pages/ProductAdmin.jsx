@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react'
-import { Container, Row, Col, Form, Button, Table, Alert, Card, Modal } from 'react-bootstrap'
+import { Container, Row, Col, Form, Button, Alert, Card, Modal } from 'react-bootstrap'
 import { faBoxes, faTrash, faIndustry, faBoxArchive, faPencil, faPlus } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { api } from '../database/db'
 import TableButton from '../components/TableButton'
+import CustomTable from '../components/Table/Table'
 
 const ProductAdmin = () => {
   const [manufacturers, setManufacturers] = useState([])
@@ -193,6 +194,41 @@ const ProductAdmin = () => {
     return set.name.trim() !== '' && set.product_line_id !== ''
   }
 
+  const columns = [
+    { key: 'name', label: 'Name' },
+    { key: 'actions', label: '', className: 'actions-cell' }
+  ];
+
+  const renderCell = (row, column) => {
+    switch (column.key) {
+      case 'name':
+        return row.name;
+      case 'actions':
+        return (
+          <>
+            <TableButton
+              icon={faPencil}
+              variant="primary"
+              onClick={() => {
+                setEditingManufacturer(row);
+                setShowManufacturerModal(true);
+              }}
+              title="Edit Company"
+              className="me-2"
+            />
+            <TableButton
+              icon={faTrash}
+              variant="danger"
+              onClick={() => handleDeleteManufacturer(row.id)}
+              title="Delete Company"
+            />
+          </>
+        );
+      default:
+        return row[column.key];
+    }
+  };
+
   if (loading) return <div>Loading...</div>
 
   return (
@@ -241,40 +277,11 @@ const ProductAdmin = () => {
                 </Row>
               </Form>
 
-              <Table hover>
-                <thead>
-                    <tr>
-                    <th>Name</th>
-                    <th className="w-1 whitespace-nowrap"></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {manufacturers.map(manufacturer => (
-                    <tr key={manufacturer.id}>
-                        <td>{manufacturer.name}</td>
-                        <td className="whitespace-nowrap">
-                        <div className="flex gap-2">
-                            <TableButton
-                            icon={faPencil}
-                            variant="primary"
-                            onClick={() => {
-                                setEditingManufacturer(manufacturer)
-                                setShowManufacturerModal(true)
-                            }}
-                            title="Edit Company"
-                            />
-                            <TableButton
-                            icon={faTrash}
-                            variant="danger"
-                            onClick={() => handleDeleteManufacturer(manufacturer.id)}
-                            title="Delete Company"
-                            />
-                        </div>
-                        </td>
-                    </tr>
-                    ))}
-                </tbody>
-                </Table>
+              <CustomTable
+                columns={columns}
+                data={manufacturers}
+                renderCell={renderCell}
+              />
             </Card.Body>
           </Card>
         </Col>
@@ -327,41 +334,45 @@ const ProductAdmin = () => {
                 </Row>
               </Form>
 
-              <Table hover className="table-with-actions">
-                <thead>
-                  <tr>
-                    <th>Name</th>
-                    <th>Manufacturer</th>
-                    <th width="10"></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {productLines.map(line => (
-                    <tr key={line.id}>
-                      <td>{line.name}</td>
-                      <td>{line.manufacturer_name}</td>
-                      <td className="text-nowrap">
-                        <TableButton
-                          icon={faPencil}
-                          variant="primary"
-                          onClick={() => {
-                            setEditingProductLine(line)
-                            setShowProductLineModal(true)
-                          }}
-                          title="Edit Product Line"
-                          className="me-2"
-                        />
-                        <TableButton
-                          icon={faTrash}
-                          variant="danger"
-                          onClick={() => handleDeleteProductLine(line.id)}
-                          title="Delete Product Line"
-                        />
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </Table>
+              <CustomTable
+                columns={[
+                  { key: 'name', label: 'Name' },
+                  { key: 'manufacturer', label: 'Manufacturer' },
+                  { key: 'actions', label: '', className: 'actions-cell' }
+                ]}
+                data={productLines}
+                renderCell={(row, column) => {
+                  switch (column.key) {
+                    case 'name':
+                      return row.name;
+                    case 'manufacturer':
+                      return row.manufacturer_name;
+                    case 'actions':
+                      return (
+                        <>
+                          <TableButton
+                            icon={faPencil}
+                            variant="primary"
+                            onClick={() => {
+                              setEditingProductLine(row);
+                              setShowProductLineModal(true);
+                            }}
+                            title="Edit Product Line"
+                            className="me-2"
+                          />
+                          <TableButton
+                            icon={faTrash}
+                            variant="danger"
+                            onClick={() => handleDeleteProductLine(row.id)}
+                            title="Delete Product Line"
+                          />
+                        </>
+                      );
+                    default:
+                      return row[column.key];
+                  }
+                }}
+              />
             </Card.Body>
           </Card>
         </Col>
@@ -432,43 +443,48 @@ const ProductAdmin = () => {
                 </Row>
               </Form>
 
-              <Table hover className="table-with-actions">
-                <thead>
-                  <tr>
-                    <th>Name</th>
-                    <th>Manufacturer</th>
-                    <th>Product Line</th>
-                    <th width="100"></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {productSets.map(set => (
-                    <tr key={set.id}>
-                      <td>{set.name}</td>
-                      <td>{set.manufacturer_name}</td>
-                      <td>{set.product_line_name}</td>
-                      <td className="text-nowrap">
-                        <TableButton
-                          icon={faPencil}
-                          variant="primary"
-                          onClick={() => {
-                            setEditingProductSet(set)
-                            setShowProductSetModal(true)
-                          }}
-                          title="Edit Product Set"
-                          className="me-2"
-                        />
-                        <TableButton
-                          icon={faTrash}
-                          variant="danger"
-                          onClick={() => handleDeleteProductSet(set.id)}
-                          title="Delete Product Set"
-                        />
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </Table>
+              <CustomTable
+                columns={[
+                  { key: 'name', label: 'Name' },
+                  { key: 'manufacturer', label: 'Manufacturer' },
+                  { key: 'productLine', label: 'Product Line' },
+                  { key: 'actions', label: '', className: 'actions-cell' }
+                ]}
+                data={productSets}
+                renderCell={(row, column) => {
+                  switch (column.key) {
+                    case 'name':
+                      return row.name;
+                    case 'manufacturer':
+                      return row.manufacturer_name;
+                    case 'productLine':
+                      return row.product_line_name;
+                    case 'actions':
+                      return (
+                        <>
+                          <TableButton
+                            icon={faPencil}
+                            variant="primary"
+                            onClick={() => {
+                              setEditingProductSet(row);
+                              setShowProductSetModal(true);
+                            }}
+                            title="Edit Product Set"
+                            className="me-2"
+                          />
+                          <TableButton
+                            icon={faTrash}
+                            variant="danger"
+                            onClick={() => handleDeleteProductSet(row.id)}
+                            title="Delete Product Set"
+                          />
+                        </>
+                      );
+                    default:
+                      return row[column.key];
+                  }
+                }}
+              />
             </Card.Body>
           </Card>
         </Col>
