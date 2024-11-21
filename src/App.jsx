@@ -8,25 +8,28 @@ import MinisAdmin from './pages/MinisAdmin.jsx'
 import DatabaseOverview from './pages/DatabaseOverview.jsx'
 import ManualSQL from './pages/ManualSQL.jsx'
 import './App.css'
+import ErrorBoundary from './components/ErrorBoundary.jsx'
 
 function App() {
   return (
     <ThemeProvider>
-      <Router>
-        <div className="d-flex">
-          <Sidebar />
-          <div className="flex-grow-1">
-            <Routes>
-              <Route path="/overview" element={<MiniOverview />} />
-              <Route path="/product-admin" element={<ProductAdmin />} />
-              <Route path="/minis-admin" element={<MinisAdmin />} />
-              <Route path="/database" element={<DatabaseOverview />} />
-              <Route path="/manual-sql" element={<ManualSQL />} />
-              <Route path="/" element={<Navigate to="/overview" replace />} />
-            </Routes>
+      <ErrorBoundary>
+        <Router>
+          <div className="d-flex">
+            <Sidebar />
+            <div className="flex-grow-1">
+              <Routes>
+                <Route path="/overview" element={<MiniOverview />} />
+                <Route path="/product-admin" element={<ProductAdmin />} />
+                <Route path="/minis-admin" element={<MinisAdmin />} />
+                <Route path="/database" element={<DatabaseOverview />} />
+                <Route path="/manual-sql" element={<ManualSQL />} />
+                <Route path="/" element={<Navigate to="/overview" replace />} />
+              </Routes>
+            </div>
           </div>
-        </div>
-      </Router>
+        </Router>
+      </ErrorBoundary>
     </ThemeProvider>
   )
 }
