@@ -1283,5 +1283,18 @@ app.get('/api/settings/productadmin_entries_per_page', async (req, res) => {
   }
 })
 
+// Add this to your settings endpoints
+app.get('/api/settings/minisadmin_entries_per_page', async (req, res) => {
+  try {
+    const setting = await db.get(
+      'SELECT setting_value FROM settings WHERE setting_name = ?', 
+      ['minisadmin_entries_per_page']
+    )
+    res.json({ value: setting?.setting_value || '10' })
+  } catch (error) {
+    res.status(500).json({ error: error.message })
+  }
+})
+
 // Add the closing brace for the entire module
 module.exports = app 

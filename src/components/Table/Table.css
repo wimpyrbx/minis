@@ -84,26 +84,38 @@
 }
 
 /* Add to your existing CSS */
-.placeholder-light::placeholder {
-  color: #adb5bd !important;
-  opacity: 0.5 !important;
+.placeholder-light::placeholder,
+select.placeholder-light option[value=""],  /* Target empty value option */
+select.placeholder-light:invalid,           /* Target when no selection */
+select.placeholder-light option:first-child /* Target first option */ {
+  color: #8c959e !important;
+  opacity: 1 !important;
 }
 
-/* For select elements */
-.placeholder-light option:first-of-type {
-  color: #adb5bd;
-  opacity: 0.5;
+/* Style the select element itself when showing placeholder */
+select.placeholder-light {
+  color: #8c959e;  /* Default color matches placeholder */
+}
+
+/* When an actual value is selected, use normal text color */
+select.placeholder-light:not([value=""]):not(:invalid) {
+  color: inherit;
 }
 
 /* Dark mode support */
-[data-bs-theme="dark"] .placeholder-light::placeholder {
+[data-bs-theme="dark"] .placeholder-light::placeholder,
+[data-bs-theme="dark"] select.placeholder-light option[value=""],
+[data-bs-theme="dark"] select.placeholder-light:invalid,
+[data-bs-theme="dark"] select.placeholder-light option:first-child {
   color: #6c757d !important;
-  opacity: 0.5 !important;
 }
 
-[data-bs-theme="dark"] .placeholder-light option:first-of-type {
+[data-bs-theme="dark"] select.placeholder-light {
   color: #6c757d;
-  opacity: 0.5;
+}
+
+[data-bs-theme="dark"] select.placeholder-light:not([value=""]):not(:invalid) {
+  color: inherit;
 }
 
 /* Update the category-cell class to dimmed-cell */
@@ -119,17 +131,17 @@ td.dimmed-cell {
   color: #6c757d !important;
 }
 
-/* Add these new styles for pagination */
+/* Update the pagination wrapper styles */
 .pagination-wrapper {
   display: flex;
   justify-content: center;
-  padding: 0.75rem 0;
-  margin: 0.25rem 0;
+  padding: 0 0 0.75rem 0;  /* Remove top padding, keep bottom padding */
+  margin: 0;  /* Remove all margins */
 }
 
 .pagination {
   margin: 0;
-  gap: 2px;  /* Add small gap between items */
+  gap: 2px;
 }
 
 .pagination .page-link {
@@ -184,4 +196,17 @@ td.dimmed-cell {
 [data-bs-theme="dark"] .pagination .page-item.disabled .page-link {
   color: #6c757d;
   border-color: #454d55;
-} 
+}
+
+/* Update the table bottom spacing rules */
+.card-body .custom-table:last-child,
+.card-body .table-with-actions:last-child {
+  margin-bottom: 1rem;  /* Default spacing when table is last element */
+}
+
+/* Remove margin only when pagination follows */
+.custom-table + .pagination-wrapper,
+.table-with-actions + .pagination-wrapper {
+  margin-top: 0;  /* Remove top margin when following table */
+}
+ 

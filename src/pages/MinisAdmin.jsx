@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { Container, Row, Col, Form, Button, Alert, Card, Modal } from 'react-bootstrap'
+import { Container, Row, Col, Form, Button, Alert, Card, Modal, Pagination } from 'react-bootstrap'
 import { faCubes, faTrash, faLayerGroup, faCube, faPencil, faPlus, faImage, faTag, faLayerGroup as faCategory } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { api } from '../database/db'
 import TableButton from '../components/TableButton'
 import CustomTable from '../components/Table/Table'
+import PageHeader from '../components/PageHeader/PageHeader'
 
 const MinisAdmin = () => {
   const [categories, setCategories] = useState([])
@@ -56,8 +57,29 @@ const MinisAdmin = () => {
     }
   };
 
+  // Add these new states near the top with other state declarations
+  const [entriesPerPage, setEntriesPerPage] = useState(10)
+  const [categoriesPage, setCategoriesPage] = useState(1)
+  const [typesPage, setTypesPage] = useState(1)
+
+  // Add new state for filtering
+  const [selectedCategoryForTypes, setSelectedCategoryForTypes] = useState('')
+
   useEffect(() => {
     fetchData()
+  }, [])
+
+  useEffect(() => {
+    const fetchEntriesPerPage = async () => {
+      try {
+        const response = await api.get('/api/settings/minisadmin_entries_per_page')
+        setEntriesPerPage(parseInt(response.data.value))
+      } catch (err) {
+        console.error('Error fetching entries per page setting:', err)
+        setEntriesPerPage(10) // fallback to default
+      }
+    }
+    fetchEntriesPerPage()
   }, [])
 
   const fetchData = async () => {
@@ -184,23 +206,103 @@ const MinisAdmin = () => {
   // Add this near the top with other refs
   const categoryNameInputRef = useRef(null)
 
+  // Add these pagination helper functions
+  const getPaginatedData = (data, page, perPage) => {
+    const start = (page - 1) * perPage
+    const end = start + perPage
+    return data.slice(start, end)
+  }
+
+  const getTotalPages = (totalItems, perPage) => {
+    return Math.ceil(totalItems / perPage)
+  }
+
+  // Add this handler for entries per page change
+  const handleEntriesPerPageChange = async (e) => {
+    const value = e.target.value
+    setEntriesPerPage(parseInt(value))
+    setCategoriesPage(1)
+    setTypesPage(1)
+    try {
+      await api.put('/api/settings/minisadmin_entries_per_page', { value })
+    } catch (err) {
+      console.error('Error saving entries per page setting:', err)
+    }
+  }
+
+  // Add the PaginationControl component
+  const PaginationControl = ({ currentPage, totalPages, onPageChange }) => {
+    if (totalPages <= 1) return null;
+    
+    return (
+      <div className="pagination-wrapper">
+        <Pagination size="sm">
+          <Pagination.First 
+            onClick={() => onPageChange(1)} 
+            disabled={currentPage === 1}
+          />
+          <Pagination.Prev 
+            onClick={() => onPageChange(currentPage - 1)}
+            disabled={currentPage === 1}
+          />
+          {currentPage > 2 && <Pagination.Item onClick={() => onPageChange(1)}>1</Pagination.Item>}
+          {currentPage > 3 && <Pagination.Ellipsis />}
+          {currentPage > 1 && <Pagination.Item onClick={() => onPageChange(currentPage - 1)}>{currentPage - 1}</Pagination.Item>}
+          <Pagination.Item active>{currentPage}</Pagination.Item>
+          {currentPage < totalPages && <Pagination.Item onClick={() => onPageChange(currentPage + 1)}>{currentPage + 1}</Pagination.Item>}
+          {currentPage < totalPages - 2 && <Pagination.Ellipsis />}
+          {currentPage < totalPages - 1 && <Pagination.Item onClick={() => onPageChange(totalPages)}>{totalPages}</Pagination.Item>}
+          <Pagination.Next 
+            onClick={() => onPageChange(currentPage + 1)}
+            disabled={currentPage === totalPages}
+          />
+          <Pagination.Last 
+            onClick={() => onPageChange(totalPages)}
+            disabled={currentPage === totalPages}
+          />
+        </Pagination>
+      </div>
+    )
+  }
+
+  // Add filtered data getter for types
+  const getFilteredTypes = () => {
+    if (!selectedCategoryForTypes) return types
+    return types.filter(type => 
+      type.category_id.toString() === selectedCategoryForTypes
+    )
+  }
+
   return (
     <Container fluid className="content">
-      <Card className="mb-4">
-        <Card.Body className="d-flex align-items-center">
-          <FontAwesomeIcon icon={faCubes} className="text-success me-3" size="2x" />
-          <div>
-            <h4 className="mb-0">Minis Admin</h4>
-            <small className="text-muted">Manage categories and types</small>
-          </div>
-        </Card.Body>
-      </Card>
+      <PageHeader
+        icon={faCubes}
+        iconColor="text-success"
+        title="Minis Admin"
+        subtitle="Manage categories and types"
+      >
+        <div className="d-flex align-items-center justify-content-end">
+          <span className="text-muted me-2">Show</span>
+          <Form.Select 
+            size="sm" 
+            value={entriesPerPage} 
+            onChange={handleEntriesPerPageChange}
+            style={{ width: '70px' }}
+            className="mx-2"
+          >
+            <option value="10">10</option>
+            <option value="25">25</option>
+            <option value="50">50</option>
+          </Form.Select>
+          <span className="text-muted">entries</span>
+        </div>
+      </PageHeader>
 
       {error && <Alert variant="danger" className="mb-4">{error}</Alert>}
 
       <Row>
         {/* Categories Card */}
-        <Col md={3}>
+        <Col md={5}>
           <Card className="mb-4">
             <Card.Body className="pb-0">
               <div className="d-flex align-items-center mb-4">
@@ -222,7 +324,7 @@ const MinisAdmin = () => {
                         type="text"
                         value={newCategory.name}
                         onChange={(e) => setNewCategory({...newCategory, name: e.target.value})}
-                        placeholder="Category name"
+                        placeholder="Name..."
                         required
                         style={{ paddingLeft: '35px' }}
                         className="placeholder-light"
@@ -245,15 +347,20 @@ const MinisAdmin = () => {
 
               <CustomTable
                 columns={columns}
-                data={categories}
+                data={getPaginatedData(categories, categoriesPage, entriesPerPage)}
                 renderCell={renderCell}
+              />
+              <PaginationControl
+                currentPage={categoriesPage}
+                totalPages={getTotalPages(categories.length, entriesPerPage)}
+                onPageChange={setCategoriesPage}
               />
             </Card.Body>
           </Card>
         </Col>
 
         {/* Types Card */}
-        <Col md={4}>
+        <Col md={7}>
           <Card className="mb-4">
             <Card.Body className="pb-0">
               <div className="d-flex align-items-center mb-4">
@@ -272,12 +379,15 @@ const MinisAdmin = () => {
                       />
                       <Form.Select
                         value={newType.category_id}
-                        onChange={(e) => setNewType({...newType, category_id: e.target.value})}
+                        onChange={(e) => {
+                          setNewType({...newType, category_id: e.target.value})
+                          setSelectedCategoryForTypes(e.target.value) // Update filter when category is selected
+                        }}
                         required
                         style={{ paddingLeft: '35px' }}
                         className="placeholder-light"
                       >
-                        <option value="">Select category</option>
+                        <option value="">Category...</option>
                         {categories.map(category => (
                           <option key={category.id} value={category.id}>
                             {category.name}
@@ -298,7 +408,7 @@ const MinisAdmin = () => {
                         type="text"
                         value={newType.name}
                         onChange={(e) => setNewType({...newType, name: e.target.value})}
-                        placeholder="Type name"
+                        placeholder="Name..."
                         required
                         style={{ paddingLeft: '35px' }}
                         className="placeholder-light"
@@ -325,7 +435,7 @@ const MinisAdmin = () => {
                   { key: 'name', label: 'Name' },
                   { key: 'actions', label: '', className: 'actions-cell' }
                 ]}
-                data={types}
+                data={getPaginatedData(getFilteredTypes(), typesPage, entriesPerPage)}
                 renderCell={(row, column) => {
                   switch (column.key) {
                     case 'name':
@@ -354,6 +464,11 @@ const MinisAdmin = () => {
                       return row[column.key];
                   }
                 }}
+              />
+              <PaginationControl
+                currentPage={typesPage}
+                totalPages={getTotalPages(getFilteredTypes().length, entriesPerPage)}
+                onPageChange={setTypesPage}
               />
             </Card.Body>
           </Card>

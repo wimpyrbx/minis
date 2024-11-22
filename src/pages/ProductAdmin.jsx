@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { Container, Row, Col, Form, Button, Alert, Card, Modal, Pagination } from 'react-bootstrap'
 import { faBoxes, faTrash, faIndustry, faBoxArchive, faPencil, faPlus } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { api } from '../database/db'
 import TableButton from '../components/TableButton'
 import CustomTable from '../components/Table/Table'
+import PageHeader from '../components/PageHeader/PageHeader'
 
 const ProductAdmin = () => {
   const [manufacturers, setManufacturers] = useState([])
@@ -35,6 +36,10 @@ const ProductAdmin = () => {
   const [manufacturersPage, setManufacturersPage] = useState(1)
   const [productLinesPage, setProductLinesPage] = useState(1)
   const [productSetsPage, setProductSetsPage] = useState(1)
+
+  // Add these refs near the top
+  const manufacturerSelectRef = useRef(null)
+  const manufacturerSelectForSetsRef = useRef(null)
 
   useEffect(() => {
     fetchData()
@@ -102,6 +107,8 @@ const ProductAdmin = () => {
     try {
       await api.post('/api/product-lines', newProductLine)
       setNewProductLine({ name: '', company_id: '' })
+      setSelectedManufacturerForLines('')  // Clear the filter
+      manufacturerSelectRef.current?.focus()
       fetchData()
     } catch (err) {
       setError(err.message)
@@ -113,6 +120,8 @@ const ProductAdmin = () => {
     try {
       await api.post('/api/product-sets', newProductSet)
       setNewProductSet({ name: '', product_line_id: '' })
+      setSelectedManufacturerForSets('')  // Clear the filter
+      manufacturerSelectForSetsRef.current?.focus()
       fetchData()
     } catch (err) {
       setError(err.message)
@@ -328,33 +337,28 @@ const ProductAdmin = () => {
 
   return (
     <Container fluid className="content">
-      <Card className="mb-4">
-        <Card.Body>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
-            <div className="d-flex align-items-center">
-              <FontAwesomeIcon icon={faBoxes} className="text-warning me-3" size="2x" />
-              <div>
-                <h4 className="mb-0">Product Admin</h4>
-                <small className="text-muted">Manage manufacturers, product lines and sets</small>
-              </div>
-            </div>
-            <div className="d-flex align-items-center">
-              <span className="text-muted me-2">Show</span>
-              <Form.Select 
-                size="sm" 
-                value={entriesPerPage} 
-                onChange={handleEntriesPerPageChange}
-                style={{ width: '70px' }}
-              >
-                <option value="10">10</option>
-                <option value="25">25</option>
-                <option value="50">50</option>
-              </Form.Select>
-              <span className="text-muted ms-2">entries</span>
-            </div>
-          </div>
-        </Card.Body>
-      </Card>
+      <PageHeader
+        icon={faBoxes}
+        iconColor="text-warning"
+        title="Product Admin"
+        subtitle="Manage manufacturers, product lines and sets"
+      >
+        <div className="d-flex align-items-center justify-content-end">
+          <span className="text-muted me-2">Show</span>
+          <Form.Select 
+            size="sm" 
+            value={entriesPerPage} 
+            onChange={handleEntriesPerPageChange}
+            style={{ width: '70px' }}
+            className="mx-2"
+          >
+            <option value="10">10</option>
+            <option value="25">25</option>
+            <option value="50">50</option>
+          </Form.Select>
+          <span className="text-muted">entries</span>
+        </div>
+      </PageHeader>
 
       {error && <Alert variant="danger" className="mb-4">{error}</Alert>}
 
@@ -381,7 +385,7 @@ const ProductAdmin = () => {
                         type="text"
                         value={newManufacturer.name}
                         onChange={(e) => setNewManufacturer({...newManufacturer, name: e.target.value})}
-                        placeholder="Manufacturer name"
+                        placeholder="Name..."
                         required
                         style={{ paddingLeft: '35px' }}
                         className="placeholder-light"
@@ -435,6 +439,7 @@ const ProductAdmin = () => {
                         style={{ left: '10px', top: '50%', transform: 'translateY(-50%)' }}
                       />
                       <Form.Select
+                        ref={manufacturerSelectRef}  // Add ref to Product Lines manufacturer select
                         value={newProductLine.company_id}
                         onChange={(e) => {
                           setNewProductLine({...newProductLine, company_id: e.target.value})
@@ -444,7 +449,7 @@ const ProductAdmin = () => {
                         style={{ paddingLeft: '35px' }}
                         className="placeholder-light"
                       >
-                        <option value="">Select manufacturer</option>
+                        <option value="">Manufacturer...</option>
                         {manufacturers.map(manufacturer => (
                           <option key={manufacturer.id} value={manufacturer.id}>
                             {manufacturer.name}
@@ -464,7 +469,7 @@ const ProductAdmin = () => {
                         type="text"
                         value={newProductLine.name}
                         onChange={(e) => setNewProductLine({...newProductLine, name: e.target.value})}
-                        placeholder="Product line name"
+                        placeholder="Name..."
                         required
                         style={{ paddingLeft: '35px' }}
                         className="placeholder-light"
@@ -552,13 +557,18 @@ const ProductAdmin = () => {
                         style={{ left: '10px', top: '50%', transform: 'translateY(-50%)' }}
                       />
                       <Form.Select
+                        ref={manufacturerSelectForSetsRef}
                         value={selectedManufacturerForSets}
-                        onChange={(e) => setSelectedManufacturerForSets(e.target.value)}
+                        onChange={(e) => {
+                          setSelectedManufacturerForSets(e.target.value)
+                          // Clear both product line and name when manufacturer changes
+                          setNewProductSet({ name: '', product_line_id: '' })
+                        }}
                         required
                         style={{ paddingLeft: '35px' }}
                         className="placeholder-light"
                       >
-                        <option value="">All manufacturers</option>
+                        <option value="">Manufacturer...</option>
                         {manufacturers.map(manufacturer => (
                           <option key={manufacturer.id} value={manufacturer.id}>
                             {manufacturer.name}
@@ -576,13 +586,19 @@ const ProductAdmin = () => {
                       />
                       <Form.Select
                         value={newProductSet.product_line_id}
-                        onChange={(e) => setNewProductSet({...newProductSet, product_line_id: e.target.value})}
+                        onChange={(e) => {
+                          if (!e.target.value) {
+                            setNewProductSet({ name: '', product_line_id: '' })
+                          } else {
+                            setNewProductSet({...newProductSet, product_line_id: e.target.value})
+                          }
+                        }}
                         required
                         disabled={!selectedManufacturerForSets}
                         style={{ paddingLeft: '35px' }}
                         className="placeholder-light"
                       >
-                        <option value="">Select product line</option>
+                        <option value="">Product Line...</option>
                         {productLines
                           .filter(line => line.company_id.toString() === selectedManufacturerForSets)
                           .map(line => (
@@ -604,7 +620,7 @@ const ProductAdmin = () => {
                         type="text"
                         value={newProductSet.name}
                         onChange={(e) => setNewProductSet({...newProductSet, name: e.target.value})}
-                        placeholder="Product set name"
+                        placeholder="Name..."
                         required
                         style={{ paddingLeft: '35px' }}
                         className="placeholder-light"
