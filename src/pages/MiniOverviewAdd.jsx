@@ -44,7 +44,7 @@ const MiniOverviewAdd = ({ show, handleClose, categories, types, tags, productSe
         const response = await api.get('/api/painted-by')
         setPaintedByOptions(response.data)
       } catch (error) {
-        console.error('Error fetching painted by options:', error)
+        setError('Failed to fetch painted by options')
       }
     }
 
@@ -62,7 +62,7 @@ const MiniOverviewAdd = ({ show, handleClose, categories, types, tags, productSe
         image_path: compressedImage
       }))
     } catch (error) {
-      console.error('Error compressing image:', error)
+      setError('Failed to compress image')
     }
   }
 
@@ -461,6 +461,21 @@ const MiniOverviewAdd = ({ show, handleClose, categories, types, tags, productSe
                       </Form.Group>
                     </Col>
                     <Col md={6}>
+                      <Form.Group className="mb-3">
+                        <Form.Label>Location <span className="text-danger">*</span></Form.Label>
+                        <Form.Control
+                          type="text"
+                          value={newMini.location}
+                          onChange={(e) => setNewMini(prev => ({ ...prev, location: e.target.value }))}
+                          required
+                          isInvalid={validationErrors.location}
+                        />
+                        {validationErrors.location && (
+                          <Form.Control.Feedback type="invalid">
+                            Location is required
+                          </Form.Control.Feedback>
+                        )}
+                      </Form.Group>
                       <Form.Group className="mb-3">
                         <Form.Label>Product Set</Form.Label>
                         <SearchableSelect

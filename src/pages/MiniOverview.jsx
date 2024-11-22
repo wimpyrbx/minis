@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { Container, Card, Button, Table, Row, Col, Form } from 'react-bootstrap'
+import { Container, Card, Button, Table, Row, Col, Form, Pagination } from 'react-bootstrap'
 import { faPhotoFilm, faPlus, faList, faTableCells, faImage, faPencil, faTrash } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { api } from '../database/db'
@@ -42,6 +42,10 @@ const MiniOverview = () => {
   const [viewType, setViewType] = useState('table')
   const [entriesPerPage, setEntriesPerPage] = useState(10)
   const [currentPage, setCurrentPage] = useState(1)
+  const [itemsPerPage] = useState(10)  // You can adjust this number
+
+  // Add new state for search
+  const [searchTerm, setSearchTerm] = useState('')
 
   // First useEffect to fetch data
   useEffect(() => {
@@ -125,11 +129,32 @@ const MiniOverview = () => {
     }
   }, [categories, types, tags, productSets]) // Removed minis from dependencies
 
-  // Pagination
-  const paginatedMinis = minis.slice(
+  // Update the filter function to include tags
+  const filterMinis = (minis) => {
+    if (!searchTerm) return minis
+
+    return minis.filter(mini => {
+      const searchLower = searchTerm.toLowerCase()
+      
+      // Check each field
+      const nameMatch = mini.name?.toLowerCase().includes(searchLower)
+      const locationMatch = mini.location?.toLowerCase().includes(searchLower)
+      const categoriesMatch = mini.category_names?.toLowerCase().includes(searchLower)
+      const typesMatch = mini.type_names?.toLowerCase().includes(searchLower)
+      const proxyTypesMatch = mini.proxy_type_names?.toLowerCase().includes(searchLower)
+      const tagsMatch = mini.tag_names?.toLowerCase().includes(searchLower)
+
+      return nameMatch || locationMatch || categoriesMatch || typesMatch || proxyTypesMatch || tagsMatch
+    })
+  }
+
+  // Update the pagination calculation to use filtered minis
+  const filteredMinis = filterMinis(minis)
+  const currentMinis = filteredMinis.slice(
     (currentPage - 1) * entriesPerPage,
     currentPage * entriesPerPage
   )
+  const totalPages = Math.ceil(filteredMinis.length / entriesPerPage)
 
   // Handle View Type Change
   const handleViewTypeChange = async (type) => {
@@ -201,6 +226,66 @@ const MiniOverview = () => {
     setShowImageModal(true)
   }
 
+  // Add this function to handle page changes
+  const handlePageChange = (pageNumber) => {
+    setCurrentPage(pageNumber)
+  }
+
+  // Add this function to generate pagination items
+  const renderPaginationItems = () => {
+    const items = []
+    
+    // Always show first page
+    items.push(
+      <Pagination.Item
+        key={1}
+        active={currentPage === 1}
+        onClick={() => handlePageChange(1)}
+      >
+        1
+      </Pagination.Item>
+    )
+
+    // Add ellipsis if needed
+    if (currentPage > 3) {
+      items.push(<Pagination.Ellipsis key="ellipsis1" />)
+    }
+
+    // Add pages around current page
+    for (let number = Math.max(2, currentPage - 1); number <= Math.min(totalPages - 1, currentPage + 1); number++) {
+      if (number === 1 || number === totalPages) continue
+      items.push(
+        <Pagination.Item
+          key={number}
+          active={currentPage === number}
+          onClick={() => handlePageChange(number)}
+        >
+          {number}
+        </Pagination.Item>
+      )
+    }
+
+    // Add ellipsis if needed
+    if (currentPage < totalPages - 2) {
+      items.push(<Pagination.Ellipsis key="ellipsis2" />)
+    }
+
+    // Always show last page if there is more than one page
+    if (totalPages > 1) {
+      items.push(
+        <Pagination.Item
+          key={totalPages}
+          active={currentPage === totalPages}
+          onClick={() => handlePageChange(totalPages)}
+        >
+          {totalPages}
+        </Pagination.Item>
+      )
+    }
+
+    return items
+  }
+
   if (error) return <div>Error: {error}</div>
 
   return (
@@ -219,7 +304,7 @@ const MiniOverview = () => {
         <div className="d-flex justify-content-between align-items-center mb-4">
           <div className="d-flex align-items-center">
             <div className="d-flex align-items-center me-4" style={{ whiteSpace: 'nowrap' }}>
-              <span className="me-2">Show</span>a
+              <span className="me-2">Show</span>
               <Form.Select 
                 size="sm" 
                 style={{ width: '65px' }}  
@@ -232,6 +317,18 @@ const MiniOverview = () => {
               </Form.Select>
               <span className="ms-2">entries</span>
             </div>
+            <Form.Control
+              type="text"
+              placeholder="Search..."
+              size="sm"
+              value={searchTerm}
+              onChange={(e) => {
+                setSearchTerm(e.target.value)
+                setCurrentPage(1) // Reset to first page when searching
+              }}
+              className="me-4"
+              style={{ width: '200px' }}
+            />
             <div className="btn-group me-4">  
               <Button 
                 variant={viewType === 'table' ? 'light' : 'outline-light'}
@@ -264,128 +361,147 @@ const MiniOverview = () => {
 
         {/* Conditional rendering based on view type */}
         {viewType === 'table' ? (
-          <Table hover responsive className="table-with-actions small-text">
-            <thead>
-              <tr>
-                <th style={{ width: '50px' }}></th>
-                <th style={{ whiteSpace: 'nowrap' }}>Name</th>
-                <th style={{ whiteSpace: 'nowrap' }}>Location</th>
-                <th>Categories</th>
-                <th>Types</th>
-                <th>Proxy Types</th>
-                <th>Product Sets</th>
-                <th style={{ width: '150px', maxWidth: '150px' }}>Tags</th>
-                <th style={{ textAlign: 'center' }}>QTY</th>
-                <th className="action-column"></th>
-              </tr>
-            </thead>
-            <tbody>
-              {paginatedMinis.map(mini => (
-                <tr key={mini.id}>
-                  <td className="text-center">
-                    {mini.image_path && (
-                      <img 
-                        src={mini.image_path} 
-                        alt={mini.name}
-                        style={{ 
-                          width: '40px', 
-                          height: '40px', 
-                          objectFit: 'contain',
-                          cursor: 'pointer'
-                        }}
-                        onClick={() => handleImageClick(mini)}
-                        title="Click to view full image"
-                      />
-                    )}
-                  </td>
-                  <td style={{ whiteSpace: 'nowrap' }}>
-                    <a 
-                      href={`https://www.miniscollector.com/minis/gallery?title=${encodeURIComponent(mini.name)}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-decoration-none"
-                    >
-                      {mini.name}
-                    </a>
-                  </td>
-                  <td style={{ whiteSpace: 'nowrap' }}>{mini.location}</td>
-                  <td>{mini.category_names?.split(',').join(', ')}</td>
-                  <td>{mini.type_names?.split(',').join(', ')}</td>
-                  <td>{mini.proxy_type_names?.split(',').join(', ')}</td>
-                  <td>
-                    {mini.product_set_names?.split(',').map((setName, index) => {
-                      const matches = setName.trim().match(/(.+?)\s*\((.+?)\s+by\s+(.+?)\)/)
-                      if (matches) {
-                        const [_, setName, productLine, manufacturer] = matches
-                        return (
-                          <div key={index} style={{ marginBottom: index < mini.product_set_names.split(',').length - 1 ? '1rem' : 0 }}>
-                            <div className="fw-bold">{manufacturer}</div>
-                            <div>· {productLine}</div>
-                            <div>·· {setName}</div>
-                          </div>
-                        )
-                      }
-                      return setName
-                    })}
-                  </td>
-                  <td style={{ width: '150px', maxWidth: '150px', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {mini.tag_names?.split(',').join(', ')}
-                  </td>
-                  <td style={{ textAlign: 'center' }}>{mini.quantity}</td>
-                  <td className="action-column">
-                    <div className="action-column-content">
-                      <TableButton
-                        icon={faImage}
-                        variant="info"
-                        onClick={() => handleImageClick(mini)}
-                        title="View Image"
-                        disabled={!mini.image_path}
-                      />
-                      <TableButton
-                        icon={faPencil}
-                        variant="primary"
-                        onClick={() => handleEditMini(mini)}
-                        title="Edit Mini"
-                      />
-                      <TableButton
-                        icon={faTrash}
-                        variant="danger"
-                        onClick={() => handleDeleteMini(mini.id)}
-                        title="Delete Mini"
-                      />
-                    </div>
-                  </td>
+          <>
+            <Table hover responsive className="table-with-actions small-text">
+              <thead>
+                <tr>
+                  <th style={{ width: '50px' }}></th>
+                  <th style={{ whiteSpace: 'nowrap' }}>Name</th>
+                  <th style={{ whiteSpace: 'nowrap' }}>Location</th>
+                  <th>Categories</th>
+                  <th>Types</th>
+                  <th>Proxy Types</th>
+                  <th>Product Sets</th>
+                  <th style={{ width: '150px', maxWidth: '150px' }}>Tags</th>
+                  <th style={{ textAlign: 'center' }}>QTY</th>
+                  <th className="action-column"></th>
                 </tr>
-              ))}
-            </tbody>
-          </Table>
+              </thead>
+              <tbody>
+                {currentMinis.map(mini => (
+                  <tr key={mini.id}>
+                    <td className="text-center">
+                      {mini.image_path && (
+                        <img 
+                          src={mini.image_path} 
+                          alt={mini.name}
+                          style={{ 
+                            width: '40px', 
+                            height: '40px', 
+                            objectFit: 'contain',
+                            cursor: 'pointer'
+                          }}
+                          onClick={() => handleImageClick(mini)}
+                          title="Click to view full image"
+                        />
+                      )}
+                    </td>
+                    <td style={{ whiteSpace: 'nowrap' }}>
+                      <a 
+                        href={`https://www.miniscollector.com/minis/gallery?title=${encodeURIComponent(mini.name)}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-decoration-none"
+                      >
+                        {mini.name}
+                      </a>
+                    </td>
+                    <td style={{ whiteSpace: 'nowrap' }}>{mini.location}</td>
+                    <td>{mini.category_names?.split(',').join(', ')}</td>
+                    <td>{mini.type_names?.split(',').join(', ')}</td>
+                    <td>{mini.proxy_type_names?.split(',').join(', ')}</td>
+                    <td>
+                      {mini.product_set_names?.split(',').map((setName, index) => {
+                        const matches = setName.trim().match(/(.+?)\s*\((.+?)\s+by\s+(.+?)\)/)
+                        if (matches) {
+                          const [_, setName, productLine, manufacturer] = matches
+                          return (
+                            <div key={index} style={{ marginBottom: index < mini.product_set_names.split(',').length - 1 ? '1rem' : 0 }}>
+                              <div className="fw-bold">{manufacturer}</div>
+                              <div>· {productLine}</div>
+                              <div>·· {setName}</div>
+                            </div>
+                          )
+                        }
+                        return setName
+                      })}
+                    </td>
+                    <td style={{ width: '150px', maxWidth: '150px', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {mini.tag_names?.split(',').join(', ')}
+                    </td>
+                    <td style={{ textAlign: 'center' }}>{mini.quantity}</td>
+                    <td className="action-column">
+                      <div className="action-column-content">
+                        <TableButton
+                          icon={faImage}
+                          variant="info"
+                          onClick={() => handleImageClick(mini)}
+                          title="View Image"
+                          disabled={!mini.image_path}
+                        />
+                        <TableButton
+                          icon={faPencil}
+                          variant="primary"
+                          onClick={() => handleEditMini(mini)}
+                          title="Edit Mini"
+                        />
+                        <TableButton
+                          icon={faTrash}
+                          variant="danger"
+                          onClick={() => handleDeleteMini(mini.id)}
+                          title="Delete Mini"
+                        />
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </Table>
+          </>
         ) : (
-          <MiniCardGrid
-            minis={paginatedMinis.map(mini => ({
-              ...mini,
-              formattedProductSets: mini.product_set_names?.split(',').map(setName => {
-                const matches = setName.trim().match(/(.+?)\s*\((.+?)\s+by\s+(.+?)\)/)
-                if (matches) {
-                  const [_, setName, productLine, manufacturer] = matches
-                  return {
-                    manufacturer,
-                    productLine,
-                    setName
-                  }
-                }
-                return { setName }
-              }),
-              categories: mini.category_names?.split(',').map(cat => cat.trim()),
-              types: mini.type_names?.split(',').map(type => type.trim()),
-              proxyTypes: mini.proxy_type_names?.split(',').map(type => type.trim()),
-              tags: mini.tag_names?.split(',').map(tag => tag.trim())
-            }))}
-            onEdit={handleEditMini}
-            onDelete={handleDeleteMini}
-            onImageClick={handleImageClick}
-            darkMode={darkMode}
-          />
+          <>
+            <MiniCardGrid
+              minis={currentMinis}  // Use currentMinis instead of minis
+              onEdit={handleEditMini}
+              onDelete={handleDeleteMini}
+              onImageClick={handleImageClick}
+              darkMode={darkMode}
+            />
+          </>
         )}
+
+        {/* Add pagination */}
+        <div className="d-flex justify-content-center mt-4">
+          <Pagination className="mb-0">
+            <Pagination.First
+              onClick={() => handlePageChange(1)}
+              disabled={currentPage === 1}
+              className="border bg-light"
+            />
+            <Pagination.Prev
+              onClick={() => handlePageChange(currentPage - 1)}
+              disabled={currentPage === 1}
+              className="border bg-light"
+            />
+            
+            {renderPaginationItems().map(item => 
+              React.cloneElement(item, {
+                className: `border ${item.props.active ? 'bg-primary' : 'bg-light'}`
+              })
+            )}
+            
+            <Pagination.Next
+              onClick={() => handlePageChange(currentPage + 1)}
+              disabled={currentPage === totalPages}
+              className="border bg-light"
+            />
+            <Pagination.Last
+              onClick={() => handlePageChange(totalPages)}
+              disabled={currentPage === totalPages}
+              className="border bg-light"
+            />
+          </Pagination>
+        </div>
       </div>
 
       {/* Add Mini Modal */}
