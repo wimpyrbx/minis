@@ -321,7 +321,7 @@ const MinisAdmin = () => {
 
               <CustomTable
                 columns={[
-                  { key: 'category', label: 'Category', className: 'category-cell' },
+                  { key: 'category', label: 'Category', className: 'dimmed-cell' },
                   { key: 'name', label: 'Name' },
                   { key: 'actions', label: '', className: 'actions-cell' }
                 ]}

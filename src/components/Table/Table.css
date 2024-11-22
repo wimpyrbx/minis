@@ -106,8 +106,8 @@
   opacity: 0.5;
 }
 
-/* Update the category-cell class to only target td elements */
-td.category-cell {
+/* Update the category-cell class to dimmed-cell */
+td.dimmed-cell {
   color: #8c959e !important;
   font-style: italic;
   white-space: nowrap;
@@ -115,6 +115,6 @@ td.category-cell {
 }
 
 /* Dark mode support - only for td elements */
-[data-bs-theme="dark"] td.category-cell {
+[data-bs-theme="dark"] td.dimmed-cell {
   color: #6c757d !important;
 } 

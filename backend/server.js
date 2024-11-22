@@ -425,7 +425,7 @@ app.get('/api/product-lines', async (req, res) => {
       SELECT pl.*, pc.name as manufacturer_name
       FROM product_lines pl
       JOIN production_companies pc ON pl.company_id = pc.id
-      ORDER BY pl.name
+      ORDER BY pc.name, pl.name
     `)
     res.json(productLines)
   } catch (error) {
@@ -486,7 +486,7 @@ app.get('/api/product-sets', async (req, res) => {
       FROM product_sets ps
       JOIN product_lines pl ON ps.product_line_id = pl.id
       JOIN production_companies pc ON pl.company_id = pc.id
-      ORDER BY ps.name
+      ORDER BY pc.name, pl.name, ps.name
     `)
     res.json(productSets)
   } catch (error) {

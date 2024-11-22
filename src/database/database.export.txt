@@ -1,5 +1,5 @@
 -- Database Schema Export
--- Generated at: 2024-11-22T13:59:08.385Z
+-- Generated at: 2024-11-22T14:34:37.166Z
 -- ----------------------------------------
 
 
@@ -130,8 +130,6 @@ CREATE TABLE mini_types  (
           name TEXT NOT NULL,
     
           category_id INTEGER NOT NULL,
-    
-          image_path TEXT,
     
           FOREIGN KEY  (
     category_id

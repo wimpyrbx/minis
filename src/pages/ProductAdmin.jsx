@@ -26,44 +26,28 @@ const ProductAdmin = () => {
   const [editingProductLine, setEditingProductLine] = useState(null)
   const [editingProductSet, setEditingProductSet] = useState(null)
 
-  // Add new state for filtered product lines
-  const [selectedManufacturer, setSelectedManufacturer] = useState('')
-  const [filteredProductLines, setFilteredProductLines] = useState([])
+  // Add new states for each section's filtering
+  const [selectedManufacturerForLines, setSelectedManufacturerForLines] = useState('')
+  const [selectedManufacturerForSets, setSelectedManufacturerForSets] = useState('')
 
   useEffect(() => {
     fetchData()
   }, [])
 
   useEffect(() => {
-    if (selectedManufacturer) {
-      const filtered = productLines.filter(line => 
-        line.company_id === parseInt(selectedManufacturer)
-      )
-      setFilteredProductLines(filtered)
-      // Clear product line selection if current selection isn't in filtered list
-      if (!filtered.find(line => line.id === parseInt(newProductSet.product_line_id))) {
-        setNewProductSet(prev => ({ ...prev, product_line_id: '' }))
-      }
-    } else {
-      setFilteredProductLines([])
-      setNewProductSet(prev => ({ ...prev, product_line_id: '' }))
-    }
-  }, [selectedManufacturer, productLines])
-
-  useEffect(() => {
     // Auto-select manufacturer if there's only one
     if (manufacturers.length === 1) {
       setNewProductLine(prev => ({ ...prev, company_id: manufacturers[0].id.toString() }))
-      setSelectedManufacturer(manufacturers[0].id.toString())
+      setSelectedManufacturerForLines(manufacturers[0].id.toString())
     }
   }, [manufacturers])
 
   useEffect(() => {
     // Auto-select product line if there's only one available
-    if (filteredProductLines.length === 1) {
-      setNewProductSet(prev => ({ ...prev, product_line_id: filteredProductLines[0].id.toString() }))
+    if (productLines.length === 1) {
+      setNewProductSet(prev => ({ ...prev, product_line_id: productLines[0].id.toString() }))
     }
-  }, [filteredProductLines])
+  }, [productLines])
 
   const fetchData = async () => {
     try {
@@ -238,7 +222,7 @@ const ProductAdmin = () => {
     // Set both the product set and manufacturer
     setEditingProductSet({ ...set })
     if (productLine) {
-      setSelectedManufacturer(productLine.company_id.toString())
+      setSelectedManufacturerForSets(productLine.company_id.toString())
     }
     
     setShowProductSetModal(true)
@@ -247,7 +231,23 @@ const ProductAdmin = () => {
   const handleCloseProductSetModal = () => {
     setShowProductSetModal(false)
     setEditingProductSet(null)
-    setSelectedManufacturer('')
+    setSelectedManufacturerForSets('')
+  }
+
+  // Add filtered data getters
+  const getFilteredProductLines = () => {
+    if (!selectedManufacturerForLines) return productLines
+    return productLines.filter(line => 
+      line.company_id.toString() === selectedManufacturerForLines
+    )
+  }
+
+  const getFilteredProductSets = () => {
+    if (!selectedManufacturerForSets) return productSets
+    return productSets.filter(set => {
+      const productLine = productLines.find(line => line.id === set.product_line_id)
+      return productLine?.company_id.toString() === selectedManufacturerForSets
+    })
   }
 
   return (
@@ -268,27 +268,39 @@ const ProductAdmin = () => {
         {/* Manufacturers Card - Make narrower */}
         <Col md={3}>
           <Card className="mb-4">
-            <Card.Body>
+            <Card.Body className="pb-0">
               <div className="d-flex align-items-center mb-4">
-                <FontAwesomeIcon icon={faIndustry} className="text-primary me-2" />
+                <FontAwesomeIcon icon={faIndustry} className="text-warning me-2" />
                 <h5 className="mb-0">Manufacturers</h5>
               </div>
 
-              <Form onSubmit={handleAddManufacturer} className="mb-4">
-                <Row className="align-items-end">
+              <Form onSubmit={handleAddManufacturer} className="mb-3">
+                <Row className="g-2">
                   <Col>
-                    <Form.Group className="mb-3">
-                      <Form.Label>Name</Form.Label>
+                    <div className="position-relative">
+                      <FontAwesomeIcon 
+                        icon={faIndustry} 
+                        className="position-absolute text-muted" 
+                        style={{ left: '10px', top: '50%', transform: 'translateY(-50%)' }}
+                      />
                       <Form.Control
                         type="text"
                         value={newManufacturer.name}
                         onChange={(e) => setNewManufacturer({...newManufacturer, name: e.target.value})}
+                        placeholder="Manufacturer name"
                         required
+                        style={{ paddingLeft: '35px' }}
+                        className="placeholder-light"
                       />
-                    </Form.Group>
+                    </div>
                   </Col>
                   <Col xs="auto">
-                    <Button type="submit" variant="light" className="mb-3 border" disabled={!isValidManufacturer(newManufacturer)}>
+                    <Button 
+                      type="submit" 
+                      variant="light" 
+                      className="border"
+                      disabled={!isValidManufacturer(newManufacturer)}
+                    >
                       <FontAwesomeIcon icon={faPlus} className="me-2 text-success" />
                       Add
                     </Button>
@@ -308,44 +320,65 @@ const ProductAdmin = () => {
         {/* Product Lines Card */}
         <Col md={4}>
           <Card className="mb-4">
-            <Card.Body>
+            <Card.Body className="pb-0">
               <div className="d-flex align-items-center mb-4">
-                <FontAwesomeIcon icon={faBoxes} className="text-primary me-2" />
+                <FontAwesomeIcon icon={faBoxes} className="text-warning me-2" />
                 <h5 className="mb-0">Product Lines</h5>
               </div>
 
-              <Form onSubmit={handleAddProductLine} className="mb-4">
-                <Row className="align-items-end">
+              <Form onSubmit={handleAddProductLine} className="mb-3">
+                <Row className="g-2">
                   <Col>
-                    <Form.Group className="mb-3">
-                      <Form.Label>Name</Form.Label>
-                      <Form.Control
-                        type="text"
-                        value={newProductLine.name}
-                        onChange={(e) => setNewProductLine({...newProductLine, name: e.target.value})}
-                        required
+                    <div className="position-relative">
+                      <FontAwesomeIcon 
+                        icon={faIndustry} 
+                        className="position-absolute text-muted" 
+                        style={{ left: '10px', top: '50%', transform: 'translateY(-50%)' }}
                       />
-                    </Form.Group>
-                  </Col>
-                  <Col>
-                    <Form.Group className="mb-3">
-                      <Form.Label>Manufacturer</Form.Label>
                       <Form.Select
                         value={newProductLine.company_id}
-                        onChange={(e) => setNewProductLine({...newProductLine, company_id: e.target.value})}
+                        onChange={(e) => {
+                          setNewProductLine({...newProductLine, company_id: e.target.value})
+                          setSelectedManufacturerForLines(e.target.value)
+                        }}
                         required
+                        style={{ paddingLeft: '35px' }}
+                        className="placeholder-light"
                       >
-                        <option value="">-</option>
+                        <option value="">Select manufacturer</option>
                         {manufacturers.map(manufacturer => (
                           <option key={manufacturer.id} value={manufacturer.id}>
                             {manufacturer.name}
                           </option>
                         ))}
                       </Form.Select>
-                    </Form.Group>
+                    </div>
+                  </Col>
+                  <Col>
+                    <div className="position-relative">
+                      <FontAwesomeIcon 
+                        icon={faBoxes} 
+                        className="position-absolute text-muted" 
+                        style={{ left: '10px', top: '50%', transform: 'translateY(-50%)' }}
+                      />
+                      <Form.Control
+                        type="text"
+                        value={newProductLine.name}
+                        onChange={(e) => setNewProductLine({...newProductLine, name: e.target.value})}
+                        placeholder="Product line name"
+                        required
+                        style={{ paddingLeft: '35px' }}
+                        className="placeholder-light"
+                      />
+                    </div>
                   </Col>
                   <Col xs="auto">
-                    <Button type="submit" variant="light" className="mb-3 border" disabled={!isValidProductLine(newProductLine)}>
+                    <Button 
+                      type="submit" 
+                      variant="light" 
+                      className="border"
+                      disabled={!isValidProductLine(newProductLine)}
+                    >
                       <FontAwesomeIcon icon={faPlus} className="me-2 text-success" />
                       Add
                     </Button>
@@ -355,16 +388,16 @@ const ProductAdmin = () => {
 
               <CustomTable
                 columns={[
+                  { key: 'manufacturer_name', label: 'Manufacturer', className: 'dimmed-cell' },
                   { key: 'name', label: 'Name' },
-                  { key: 'manufacturer', label: 'Manufacturer' },
                   { key: 'actions', label: '', className: 'actions-cell' }
                 ]}
-                data={productLines}
+                data={getFilteredProductLines()}
                 renderCell={(row, column) => {
                   switch (column.key) {
                     case 'name':
                       return row.name;
-                    case 'manufacturer':
+                    case 'manufacturer_name':
                       return row.manufacturer_name;
                     case 'actions':
                       return (
@@ -399,69 +432,88 @@ const ProductAdmin = () => {
         {/* Product Sets Card - Make wider */}
         <Col md={5}>
           <Card className="mb-4">
-            <Card.Body>
+            <Card.Body className="pb-0">
               <div className="d-flex align-items-center mb-4">
-                <FontAwesomeIcon icon={faBoxArchive} className="text-primary me-2" />
+                <FontAwesomeIcon icon={faBoxArchive} className="text-warning me-2" />
                 <h5 className="mb-0">Product Sets</h5>
               </div>
 
-              <Form onSubmit={handleAddProductSet} className="mb-4">
-                <Row className="align-items-end">
+              <Form onSubmit={handleAddProductSet} className="mb-3">
+                <Row className="g-2">
                   <Col>
-                    <Form.Group className="mb-3">
-                      <Form.Label>Name</Form.Label>
-                      <Form.Control
-                        type="text"
-                        value={newProductSet.name}
-                        onChange={(e) => setNewProductSet({...newProductSet, name: e.target.value})}
-                        required
+                    <div className="position-relative">
+                      <FontAwesomeIcon 
+                        icon={faIndustry} 
+                        className="position-absolute text-muted" 
+                        style={{ left: '10px', top: '50%', transform: 'translateY(-50%)' }}
                       />
-                    </Form.Group>
-                  </Col>
-                  <Col>
-                    <Form.Group className="mb-3">
-                      <Form.Label>Manufacturer</Form.Label>
                       <Form.Select
-                        value={selectedManufacturer}
-                        onChange={(e) => {
-                          setSelectedManufacturer(e.target.value)
-                          // Clear product line selection when manufacturer changes
-                          setEditingProductSet(prev => ({
-                            ...prev,
-                            product_line_id: ''
-                          }))
-                        }}
+                        value={selectedManufacturerForSets}
+                        onChange={(e) => setSelectedManufacturerForSets(e.target.value)}
                         required
+                        style={{ paddingLeft: '35px' }}
+                        className="placeholder-light"
                       >
-                        <option value="">Select Manufacturer</option>
+                        <option value="">All manufacturers</option>
                         {manufacturers.map(manufacturer => (
                           <option key={manufacturer.id} value={manufacturer.id}>
                             {manufacturer.name}
                           </option>
                         ))}
                       </Form.Select>
-                    </Form.Group>
+                    </div>
                   </Col>
                   <Col>
-                    <Form.Group className="mb-3">
-                      <Form.Label>Product Line</Form.Label>
+                    <div className="position-relative">
+                      <FontAwesomeIcon 
+                        icon={faBoxes} 
+                        className="position-absolute text-muted" 
+                        style={{ left: '10px', top: '50%', transform: 'translateY(-50%)' }}
+                      />
                       <Form.Select
                         value={newProductSet.product_line_id}
                         onChange={(e) => setNewProductSet({...newProductSet, product_line_id: e.target.value})}
                         required
-                        disabled={!selectedManufacturer}
+                        disabled={!selectedManufacturerForSets}
+                        style={{ paddingLeft: '35px' }}
+                        className="placeholder-light"
                       >
-                        <option value="">-</option>
-                        {filteredProductLines.map(line => (
-                          <option key={line.id} value={line.id}>
-                            {line.name}
-                          </option>
-                        ))}
+                        <option value="">Select product line</option>
+                        {productLines
+                          .filter(line => line.company_id.toString() === selectedManufacturerForSets)
+                          .map(line => (
+                            <option key={line.id} value={line.id}>
+                              {line.name}
+                            </option>
+                          ))}
                       </Form.Select>
-                    </Form.Group>
+                    </div>
+                  </Col>
+                  <Col>
+                    <div className="position-relative">
+                      <FontAwesomeIcon 
+                        icon={faBoxArchive} 
+                        className="position-absolute text-muted" 
+                        style={{ left: '10px', top: '50%', transform: 'translateY(-50%)' }}
+                      />
+                      <Form.Control
+                        type="text"
+                        value={newProductSet.name}
+                        onChange={(e) => setNewProductSet({...newProductSet, name: e.target.value})}
+                        placeholder="Product set name"
+                        required
+                        style={{ paddingLeft: '35px' }}
+                        className="placeholder-light"
+                      />
+                    </div>
                   </Col>
                   <Col xs="auto">
-                    <Button type="submit" variant="light" className="mb-3 border" disabled={!isValidProductSet(newProductSet)}>
+                    <Button 
+                      type="submit" 
+                      variant="light" 
+                      className="border"
+                      disabled={!isValidProductSet(newProductSet)}
+                    >
                       <FontAwesomeIcon icon={faPlus} className="me-2 text-success" />
                       Add
                     </Button>
@@ -471,19 +523,19 @@ const ProductAdmin = () => {
 
               <CustomTable
                 columns={[
+                  { key: 'manufacturer_name', label: 'Manufacturer', className: 'dimmed-cell' },
+                  { key: 'product_line_name', label: 'Product Line', className: 'dimmed-cell' },
                   { key: 'name', label: 'Name' },
-                  { key: 'manufacturer', label: 'Manufacturer' },
-                  { key: 'productLine', label: 'Product Line' },
                   { key: 'actions', label: '', className: 'actions-cell' }
                 ]}
-                data={productSets}
+                data={getFilteredProductSets()}
                 renderCell={(row, column) => {
                   switch (column.key) {
                     case 'name':
                       return row.name;
-                    case 'manufacturer':
+                    case 'manufacturer_name':
                       return row.manufacturer_name;
-                    case 'productLine':
+                    case 'product_line_name':
                       return row.product_line_name;
                     case 'actions':
                       return (
@@ -615,9 +667,9 @@ const ProductAdmin = () => {
             <Form.Group className="mb-3">
               <Form.Label>Manufacturer</Form.Label>
               <Form.Select
-                value={selectedManufacturer}
+                value={selectedManufacturerForSets}
                 onChange={(e) => {
-                  setSelectedManufacturer(e.target.value)
+                  setSelectedManufacturerForSets(e.target.value)
                   // Clear product line selection when manufacturer changes
                   setEditingProductSet(prev => ({
                     ...prev,
@@ -643,10 +695,10 @@ const ProductAdmin = () => {
                   product_line_id: e.target.value
                 })}
                 required
-                disabled={!selectedManufacturer}
+                disabled={!selectedManufacturerForSets}
               >
                 <option value="">Select Product Line</option>
-                {filteredProductLines.map(line => (
+                {productLines.map(line => (
                   <option key={line.id} value={line.id}>
                     {line.name}
                   </option>
