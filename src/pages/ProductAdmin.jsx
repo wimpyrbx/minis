@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { Container, Row, Col, Form, Button, Alert, Card, Modal } from 'react-bootstrap'
+import { Container, Row, Col, Form, Button, Alert, Card, Modal, Pagination } from 'react-bootstrap'
 import { faBoxes, faTrash, faIndustry, faBoxArchive, faPencil, faPlus } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { api } from '../database/db'
@@ -30,6 +30,12 @@ const ProductAdmin = () => {
   const [selectedManufacturerForLines, setSelectedManufacturerForLines] = useState('')
   const [selectedManufacturerForSets, setSelectedManufacturerForSets] = useState('')
 
+  // Add these new states
+  const [entriesPerPage, setEntriesPerPage] = useState(10)
+  const [manufacturersPage, setManufacturersPage] = useState(1)
+  const [productLinesPage, setProductLinesPage] = useState(1)
+  const [productSetsPage, setProductSetsPage] = useState(1)
+
   useEffect(() => {
     fetchData()
   }, [])
@@ -48,6 +54,19 @@ const ProductAdmin = () => {
       setNewProductSet(prev => ({ ...prev, product_line_id: productLines[0].id.toString() }))
     }
   }, [productLines])
+
+  useEffect(() => {
+    const fetchEntriesPerPage = async () => {
+      try {
+        const response = await api.get('/api/settings/productadmin_entries_per_page')
+        setEntriesPerPage(parseInt(response.data.value))
+      } catch (err) {
+        console.error('Error fetching entries per page setting:', err)
+        setEntriesPerPage(10) // fallback to default
+      }
+    }
+    fetchEntriesPerPage()
+  }, [])
 
   const fetchData = async () => {
     try {
@@ -250,14 +269,89 @@ const ProductAdmin = () => {
     })
   }
 
+  const getPaginatedData = (data, page, perPage) => {
+    const start = (page - 1) * perPage
+    const end = start + perPage
+    return data.slice(start, end)
+  }
+
+  const getTotalPages = (totalItems, perPage) => {
+    return Math.ceil(totalItems / perPage)
+  }
+
+  const handleEntriesPerPageChange = async (e) => {
+    const value = e.target.value
+    setEntriesPerPage(parseInt(value))
+    setManufacturersPage(1)
+    setProductLinesPage(1)
+    setProductSetsPage(1)
+    try {
+      await api.put('/api/settings/productadmin_entries_per_page', { value })
+    } catch (err) {
+      console.error('Error saving entries per page setting:', err)
+    }
+  }
+
+  const PaginationControl = ({ currentPage, totalPages, onPageChange }) => {
+    if (totalPages <= 1) return null;
+    
+    return (
+      <div className="pagination-wrapper">
+        <Pagination size="sm">
+          <Pagination.First 
+            onClick={() => onPageChange(1)} 
+            disabled={currentPage === 1}
+          />
+          <Pagination.Prev 
+            onClick={() => onPageChange(currentPage - 1)}
+            disabled={currentPage === 1}
+          />
+          {currentPage > 2 && <Pagination.Item onClick={() => onPageChange(1)}>1</Pagination.Item>}
+          {currentPage > 3 && <Pagination.Ellipsis />}
+          {currentPage > 1 && <Pagination.Item onClick={() => onPageChange(currentPage - 1)}>{currentPage - 1}</Pagination.Item>}
+          <Pagination.Item active>{currentPage}</Pagination.Item>
+          {currentPage < totalPages && <Pagination.Item onClick={() => onPageChange(currentPage + 1)}>{currentPage + 1}</Pagination.Item>}
+          {currentPage < totalPages - 2 && <Pagination.Ellipsis />}
+          {currentPage < totalPages - 1 && <Pagination.Item onClick={() => onPageChange(totalPages)}>{totalPages}</Pagination.Item>}
+          <Pagination.Next 
+            onClick={() => onPageChange(currentPage + 1)}
+            disabled={currentPage === totalPages}
+          />
+          <Pagination.Last 
+            onClick={() => onPageChange(totalPages)}
+            disabled={currentPage === totalPages}
+          />
+        </Pagination>
+      </div>
+    )
+  }
+
   return (
     <Container fluid className="content">
       <Card className="mb-4">
-        <Card.Body className="d-flex align-items-center">
-          <FontAwesomeIcon icon={faBoxes} className="text-warning me-3" size="2x" />
-          <div>
-            <h4 className="mb-0">Product Admin</h4>
-            <small className="text-muted">Manage manufacturers, product lines and sets</small>
+        <Card.Body>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+            <div className="d-flex align-items-center">
+              <FontAwesomeIcon icon={faBoxes} className="text-warning me-3" size="2x" />
+              <div>
+                <h4 className="mb-0">Product Admin</h4>
+                <small className="text-muted">Manage manufacturers, product lines and sets</small>
+              </div>
+            </div>
+            <div className="d-flex align-items-center">
+              <span className="text-muted me-2">Show</span>
+              <Form.Select 
+                size="sm" 
+                value={entriesPerPage} 
+                onChange={handleEntriesPerPageChange}
+                style={{ width: '70px' }}
+              >
+                <option value="10">10</option>
+                <option value="25">25</option>
+                <option value="50">50</option>
+              </Form.Select>
+              <span className="text-muted ms-2">entries</span>
+            </div>
           </div>
         </Card.Body>
       </Card>
@@ -310,8 +404,13 @@ const ProductAdmin = () => {
 
               <CustomTable
                 columns={columns}
-                data={manufacturers}
+                data={getPaginatedData(manufacturers, manufacturersPage, entriesPerPage)}
                 renderCell={renderCell}
+              />
+              <PaginationControl
+                currentPage={manufacturersPage}
+                totalPages={getTotalPages(manufacturers.length, entriesPerPage)}
+                onPageChange={setManufacturersPage}
               />
             </Card.Body>
           </Card>
@@ -392,7 +491,7 @@ const ProductAdmin = () => {
                   { key: 'name', label: 'Name' },
                   { key: 'actions', label: '', className: 'actions-cell' }
                 ]}
-                data={getFilteredProductLines()}
+                data={getPaginatedData(getFilteredProductLines(), productLinesPage, entriesPerPage)}
                 renderCell={(row, column) => {
                   switch (column.key) {
                     case 'name':
@@ -424,6 +523,11 @@ const ProductAdmin = () => {
                       return row[column.key];
                   }
                 }}
+              />
+              <PaginationControl
+                currentPage={productLinesPage}
+                totalPages={getTotalPages(getFilteredProductLines().length, entriesPerPage)}
+                onPageChange={setProductLinesPage}
               />
             </Card.Body>
           </Card>
@@ -528,7 +632,7 @@ const ProductAdmin = () => {
                   { key: 'name', label: 'Name' },
                   { key: 'actions', label: '', className: 'actions-cell' }
                 ]}
-                data={getFilteredProductSets()}
+                data={getPaginatedData(getFilteredProductSets(), productSetsPage, entriesPerPage)}
                 renderCell={(row, column) => {
                   switch (column.key) {
                     case 'name':
@@ -561,6 +665,11 @@ const ProductAdmin = () => {
                       return row[column.key];
                   }
                 }}
+              />
+              <PaginationControl
+                currentPage={productSetsPage}
+                totalPages={getTotalPages(getFilteredProductSets().length, entriesPerPage)}
+                onPageChange={setProductSetsPage}
               />
             </Card.Body>
           </Card>
