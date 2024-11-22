@@ -3,38 +3,118 @@
   overflow-x: auto;
 }
 
-.custom-table {
+/* Base table styles */
+.custom-table,
+.table-with-actions {
   width: 100%;
   border-collapse: collapse;
+  margin-bottom: 1rem;
+  font-size: 0.875rem;
 }
 
-.custom-table th {
+/* Header styles */
+.custom-table th,
+.table-with-actions th {
   text-align: left;
   padding: 0.5rem;
   background-color: #f8f9fa;
   font-weight: 500;
+  border-bottom: 2px solid #dee2e6;
+  color: #6c757d;
+  font-size: 0.875rem;
 }
 
-.custom-table td {
+/* Cell styles */
+.custom-table td,
+.table-with-actions td {
   padding: 0.5rem;
   border-bottom: 1px solid #dee2e6;
+  vertical-align: middle;
 }
 
-.custom-table tr:hover {
+/* Hover effect */
+.custom-table tr:hover,
+.table-with-actions tr:hover {
   background-color: rgba(0, 0, 0, 0.02);
 }
 
-[data-bs-theme="dark"] .custom-table th {
-  background-color: #343a40;
-  color: #adb5bd;
-}
-
-[data-bs-theme="dark"] .custom-table td {
-  color: #e9ecef;
-}
-
-.actions-cell {
+/* Action column styles */
+.actions-cell,
+.action-column {
   white-space: nowrap;
   width: 1%;
   text-align: right;
+}
+
+.action-column-content {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+}
+
+/* Small text utility */
+.small-text {
+  font-size: 0.875rem;
+}
+
+/* Dark mode styles */
+[data-bs-theme="dark"] .custom-table,
+[data-bs-theme="dark"] .table-with-actions {
+  background-color: #2b2f36;
+  color: #e9ecef;
+  border-color: #454d55;
+}
+
+[data-bs-theme="dark"] .custom-table th,
+[data-bs-theme="dark"] .table-with-actions th {
+  background-color: #343a40;
+  border-bottom-color: #454d55;
+  color: #adb5bd;
+}
+
+[data-bs-theme="dark"] .custom-table td,
+[data-bs-theme="dark"] .table-with-actions td {
+  color: #e9ecef;
+  border-bottom-color: #454d55;
+}
+
+[data-bs-theme="dark"] .custom-table tr:hover,
+[data-bs-theme="dark"] .table-with-actions tr:hover {
+  background-color: rgba(255, 255, 255, 0.075);
+}
+
+/* Add to your existing CSS */
+.placeholder-light::placeholder {
+  color: #adb5bd !important;
+  opacity: 0.5 !important;
+}
+
+/* For select elements */
+.placeholder-light option:first-of-type {
+  color: #adb5bd;
+  opacity: 0.5;
+}
+
+/* Dark mode support */
+[data-bs-theme="dark"] .placeholder-light::placeholder {
+  color: #6c757d !important;
+  opacity: 0.5 !important;
+}
+
+[data-bs-theme="dark"] .placeholder-light option:first-of-type {
+  color: #6c757d;
+  opacity: 0.5;
+}
+
+/* Update the category-cell class to only target td elements */
+td.category-cell {
+  color: #8c959e !important;
+  font-style: italic;
+  white-space: nowrap;
+  width: 1%;
+}
+
+/* Dark mode support - only for td elements */
+[data-bs-theme="dark"] td.category-cell {
+  color: #6c757d !important;
 } 

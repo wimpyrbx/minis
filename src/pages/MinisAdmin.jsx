@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { Container, Row, Col, Form, Button, Alert, Card, Modal } from 'react-bootstrap'
-import { faCubes, faTrash, faLayerGroup, faCube, faPencil, faPlus } from '@fortawesome/free-solid-svg-icons'
+import { faCubes, faTrash, faLayerGroup, faCube, faPencil, faPlus, faImage, faTag, faLayerGroup as faCategory } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { api } from '../database/db'
 import TableButton from '../components/TableButton'
@@ -13,8 +13,8 @@ const MinisAdmin = () => {
   const [error, setError] = useState(null)
 
   // Form states
-  const [newCategory, setNewCategory] = useState({ name: '', image_path: '' })
-  const [newType, setNewType] = useState({ name: '', category_id: '', image_path: '' })
+  const [newCategory, setNewCategory] = useState({ name: '' })
+  const [newType, setNewType] = useState({ name: '', category_id: '' })
 
   // Edit Modal states
   const [showCategoryModal, setShowCategoryModal] = useState(false)
@@ -25,7 +25,6 @@ const MinisAdmin = () => {
   // Add columns definition
   const columns = [
     { key: 'name', label: 'Name' },
-    { key: 'image_path', label: 'Image Path' },
     { key: 'actions', label: '', className: 'actions-cell' }
   ];
 
@@ -34,8 +33,6 @@ const MinisAdmin = () => {
     switch (column.key) {
       case 'name':
         return row.name;
-      case 'image_path':
-        return row.image_path;
       case 'actions':
         return (
           <>
@@ -82,8 +79,8 @@ const MinisAdmin = () => {
   const handleAddCategory = async (e) => {
     e.preventDefault()
     try {
-      await api.post('/api/categories', newCategory)
-      setNewCategory({ name: '', image_path: '' })
+      await api.post('/api/categories', { name: newCategory.name })
+      setNewCategory({ name: '' })
       categoryNameInputRef.current?.focus()
       fetchData()
     } catch (err) {
@@ -100,7 +97,6 @@ const MinisAdmin = () => {
       setNewType(prev => ({ 
         name: '', 
         category_id: prev.category_id,
-        image_path: '' 
       }))
       typeNameInputRef.current?.focus()
       fetchData()
@@ -204,43 +200,40 @@ const MinisAdmin = () => {
 
       <Row>
         {/* Categories Card */}
-        <Col md={6}>
+        <Col md={3}>
           <Card className="mb-4">
-            <Card.Body>
+            <Card.Body className="pb-0">
               <div className="d-flex align-items-center mb-4">
                 <FontAwesomeIcon icon={faLayerGroup} className="text-success me-2" />
                 <h5 className="mb-0">Categories</h5>
               </div>
 
-              <Form onSubmit={handleAddCategory} className="mb-4">
-                <Row className="align-items-end">
+              <Form onSubmit={handleAddCategory} className="mb-3">
+                <Row className="g-2">
                   <Col>
-                    <Form.Group className="mb-3">
-                      <Form.Label>Name</Form.Label>
+                    <div className="position-relative">
+                      <FontAwesomeIcon 
+                        icon={faTag} 
+                        className="position-absolute text-muted" 
+                        style={{ left: '10px', top: '50%', transform: 'translateY(-50%)' }}
+                      />
                       <Form.Control
                         ref={categoryNameInputRef}
                         type="text"
                         value={newCategory.name}
                         onChange={(e) => setNewCategory({...newCategory, name: e.target.value})}
+                        placeholder="Category name"
                         required
+                        style={{ paddingLeft: '35px' }}
+                        className="placeholder-light"
                       />
-                    </Form.Group>
-                  </Col>
-                  <Col>
-                    <Form.Group className="mb-3">
-                      <Form.Label>Image Path</Form.Label>
-                      <Form.Control
-                        type="text"
-                        value={newCategory.image_path}
-                        onChange={(e) => setNewCategory({...newCategory, image_path: e.target.value})}
-                      />
-                    </Form.Group>
+                    </div>
                   </Col>
                   <Col xs="auto">
                     <Button 
                       type="submit" 
                       variant="light" 
-                      className="mb-3 border"
+                      className="border"
                       disabled={!isValidCategory(newCategory)}
                     >
                       <FontAwesomeIcon icon={faPlus} className="me-2 text-success" />
@@ -260,60 +253,63 @@ const MinisAdmin = () => {
         </Col>
 
         {/* Types Card */}
-        <Col md={6}>
+        <Col md={4}>
           <Card className="mb-4">
-            <Card.Body>
+            <Card.Body className="pb-0">
               <div className="d-flex align-items-center mb-4">
                 <FontAwesomeIcon icon={faCube} className="text-success me-2" />
                 <h5 className="mb-0">Types</h5>
               </div>
 
-              <Form onSubmit={handleAddType} className="mb-4">
-                <Row className="align-items-end">
-                  <Col>
-                    <Form.Group className="mb-3">
-                      <Form.Label>Name</Form.Label>
-                      <Form.Control
-                        ref={typeNameInputRef}
-                        type="text"
-                        value={newType.name}
-                        onChange={(e) => setNewType({...newType, name: e.target.value})}
-                        required
+              <Form onSubmit={handleAddType} className="mb-3">
+                <Row className="g-2">
+                  <Col md={5}>
+                    <div className="position-relative">
+                      <FontAwesomeIcon 
+                        icon={faCategory} 
+                        className="position-absolute text-muted" 
+                        style={{ left: '10px', top: '50%', transform: 'translateY(-50%)' }}
                       />
-                    </Form.Group>
-                  </Col>
-                  <Col>
-                    <Form.Group className="mb-3">
-                      <Form.Label>Category</Form.Label>
                       <Form.Select
                         value={newType.category_id}
                         onChange={(e) => setNewType({...newType, category_id: e.target.value})}
                         required
+                        style={{ paddingLeft: '35px' }}
+                        className="placeholder-light"
                       >
-                        <option value="">-</option>
+                        <option value="">Select category</option>
                         {categories.map(category => (
                           <option key={category.id} value={category.id}>
                             {category.name}
                           </option>
                         ))}
                       </Form.Select>
-                    </Form.Group>
+                    </div>
                   </Col>
                   <Col>
-                    <Form.Group className="mb-3">
-                      <Form.Label>Image Path</Form.Label>
-                      <Form.Control
-                        type="text"
-                        value={newType.image_path}
-                        onChange={(e) => setNewType({...newType, image_path: e.target.value})}
+                    <div className="position-relative">
+                      <FontAwesomeIcon 
+                        icon={faTag} 
+                        className="position-absolute text-muted" 
+                        style={{ left: '10px', top: '50%', transform: 'translateY(-50%)' }}
                       />
-                    </Form.Group>
+                      <Form.Control
+                        ref={typeNameInputRef}
+                        type="text"
+                        value={newType.name}
+                        onChange={(e) => setNewType({...newType, name: e.target.value})}
+                        placeholder="Type name"
+                        required
+                        style={{ paddingLeft: '35px' }}
+                        className="placeholder-light"
+                      />
+                    </div>
                   </Col>
                   <Col xs="auto">
                     <Button 
                       type="submit" 
                       variant="light" 
-                      className="mb-3 border"
+                      className="border"
                       disabled={!isValidType(newType)}
                     >
                       <FontAwesomeIcon icon={faPlus} className="me-2 text-success" />
@@ -325,9 +321,8 @@ const MinisAdmin = () => {
 
               <CustomTable
                 columns={[
+                  { key: 'category', label: 'Category', className: 'category-cell' },
                   { key: 'name', label: 'Name' },
-                  { key: 'category', label: 'Category' },
-                  { key: 'image_path', label: 'Image Path' },
                   { key: 'actions', label: '', className: 'actions-cell' }
                 ]}
                 data={types}
@@ -337,8 +332,6 @@ const MinisAdmin = () => {
                       return row.name;
                     case 'category':
                       return row.category_name;
-                    case 'image_path':
-                      return row.image_path;
                     case 'actions':
                       return (
                         <>
@@ -386,17 +379,6 @@ const MinisAdmin = () => {
                 required
               />
             </Form.Group>
-            <Form.Group className="mb-3">
-              <Form.Label>Image Path</Form.Label>
-              <Form.Control
-                type="text"
-                value={editingCategory?.image_path || ''}
-                onChange={(e) => setEditingCategory({
-                  ...editingCategory,
-                  image_path: e.target.value
-                })}
-              />
-            </Form.Group>
           </Form>
         </Modal.Body>
         <Modal.Footer>
@@ -417,18 +399,6 @@ const MinisAdmin = () => {
         <Modal.Body>
           <Form>
             <Form.Group className="mb-3">
-              <Form.Label>Name</Form.Label>
-              <Form.Control
-                type="text"
-                value={editingType?.name || ''}
-                onChange={(e) => setEditingType({
-                  ...editingType,
-                  name: e.target.value
-                })}
-                required
-              />
-            </Form.Group>
-            <Form.Group className="mb-3">
               <Form.Label>Category</Form.Label>
               <Form.Select
                 value={editingType?.category_id || ''}
@@ -447,14 +417,15 @@ const MinisAdmin = () => {
               </Form.Select>
             </Form.Group>
             <Form.Group className="mb-3">
-              <Form.Label>Image Path</Form.Label>
+              <Form.Label>Name</Form.Label>
               <Form.Control
                 type="text"
-                value={editingType?.image_path || ''}
+                value={editingType?.name || ''}
                 onChange={(e) => setEditingType({
                   ...editingType,
-                  image_path: e.target.value
+                  name: e.target.value
                 })}
+                required
               />
             </Form.Group>
           </Form>

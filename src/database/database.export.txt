@@ -1,5 +1,5 @@
 -- Database Schema Export
--- Generated at: 2024-11-22T11:27:39.648Z
+-- Generated at: 2024-11-22T13:59:08.385Z
 -- ----------------------------------------
 
 
@@ -16,8 +16,6 @@ CREATE TABLE mini_categories  (
           id INTEGER PRIMARY KEY AUTOINCREMENT,
     
           name TEXT NOT NULL,
-    
-          image_path TEXT,
     
           UNIQUE (
     name

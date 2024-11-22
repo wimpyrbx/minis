@@ -224,10 +224,10 @@ app.get('/api/categories', async (req, res) => {
 
 app.post('/api/categories', async (req, res) => {
   try {
-    const { name, image_path } = req.body
+    const { name } = req.body
     const result = await db.run(
-      'INSERT INTO mini_categories (name, image_path) VALUES (?, ?)',
-      [name, image_path]
+      'INSERT INTO mini_categories (name) VALUES (?)',
+      [name]
     )
     const newCategory = await db.get('SELECT * FROM mini_categories WHERE id = ?', result.lastID)
     res.status(201).json(newCategory)
@@ -288,10 +288,10 @@ app.get('/api/types', async (req, res) => {
 
 app.post('/api/types', async (req, res) => {
   try {
-    const { name, category_id, image_path } = req.body
+    const { name, category_id } = req.body
     const result = await db.run(
-      'INSERT INTO mini_types (name, category_id, image_path) VALUES (?, ?, ?)',
-      [name, category_id, image_path]
+      'INSERT INTO mini_types (name, category_id) VALUES (?, ?)',
+      [name, category_id]
     )
     const newType = await db.get(
       `SELECT mt.*, mc.name as category_name 
@@ -332,10 +332,10 @@ app.delete('/api/types/:id', async (req, res) => {
 app.put('/api/categories/:id', async (req, res) => {
   try {
     const { id } = req.params
-    const { name, image_path } = req.body
+    const { name } = req.body
     await db.run(
-      'UPDATE mini_categories SET name = ?, image_path = ? WHERE id = ?',
-      [name, image_path, id]
+      'UPDATE mini_categories SET name = ? WHERE id = ?',
+      [name, id]
     )
     const updatedCategory = await db.get('SELECT * FROM mini_categories WHERE id = ?', id)
     res.json(updatedCategory)
@@ -348,10 +348,10 @@ app.put('/api/categories/:id', async (req, res) => {
 app.put('/api/types/:id', async (req, res) => {
   try {
     const { id } = req.params
-    const { name, category_id, image_path } = req.body
+    const { name, category_id } = req.body
     await db.run(
-      'UPDATE mini_types SET name = ?, category_id = ?, image_path = ? WHERE id = ?',
-      [name, category_id, image_path, id]
+      'UPDATE mini_types SET name = ?, category_id = ? WHERE id = ?',
+      [name, category_id, id]
     )
     const updatedType = await db.get(
       `SELECT mt.*, mc.name as category_name 
