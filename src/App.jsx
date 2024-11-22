@@ -7,6 +7,7 @@ import ProductAdmin from './pages/ProductAdmin.jsx'
 import MinisAdmin from './pages/MinisAdmin.jsx'
 import DatabaseOverview from './pages/DatabaseOverview.jsx'
 import ManualSQL from './pages/ManualSQL.jsx'
+import ApiViewer from './pages/ApiViewer'
 import './App.css'
 import ErrorBoundary from './components/ErrorBoundary.jsx'
 
@@ -24,6 +25,7 @@ function App() {
                 <Route path="/minis-admin" element={<MinisAdmin />} />
                 <Route path="/database" element={<DatabaseOverview />} />
                 <Route path="/manual-sql" element={<ManualSQL />} />
+                <Route path="/api-viewer" element={<ApiViewer />} />
                 <Route path="/" element={<Navigate to="/overview" replace />} />
               </Routes>
             </div>

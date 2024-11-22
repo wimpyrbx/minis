@@ -9,7 +9,8 @@ import {
   faDatabase,
   faCode,
   faSun,
-  faMoon
+  faMoon,
+  faInfo
 } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { useTheme } from '../../context/ThemeContext'
@@ -40,6 +41,9 @@ const Sidebar = () => {
           </MenuItem>
           <MenuItem icon={faCode} to="/manual-sql" color="secondary">
             Manual SQL
+          </MenuItem>
+          <MenuItem icon={faInfo} to="/api-viewer" color="white">
+            Api Viewer
           </MenuItem>
         </MenuSection>
       </div>

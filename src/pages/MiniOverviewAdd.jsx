@@ -21,7 +21,7 @@ const MiniOverviewAdd = ({ show, handleClose, categories, types, tags, productSe
     proxy_types: [], // Array of type IDs for proxy uses
     tags: [], // Array of tag names
     product_sets: [], // Array of product set IDs
-    painted_by: 'prepainted'
+    painted_by: '1' // Default to ID 1
   })
 
   // Validation state
@@ -131,39 +131,21 @@ const MiniOverviewAdd = ({ show, handleClose, categories, types, tags, productSe
     }
 
     try {
-      const miniData = {
-        name: String(newMini.name.trim()),
-        description: String(newMini.description?.trim() || ''),
-        location: String(newMini.location.trim()),
-        quantity: String(newMini.quantity),
-        categories: newMini.categories,
-        types: newMini.types,
-        proxy_types: newMini.proxy_types,
-        product_sets: newMini.product_sets,
-        base_size_id: newMini.base_size_id,
-        tags: newMini.tags,
-        painted_by: String(newMini.painted_by)
-      }
-
+      // Prepare form data
       const formData = new FormData()
-      Object.entries(miniData).forEach(([key, value]) => {
-        if (Array.isArray(value)) {
-          formData.append(key, JSON.stringify(value))
-        } else {
-          formData.append(key, value)
-        }
-      })
+      formData.append('name', newMini.name.trim())
+      formData.append('description', newMini.description.trim())
+      formData.append('location', newMini.location.trim())
+      formData.append('quantity', newMini.quantity)
+      formData.append('base_size_id', newMini.base_size_id)
+      formData.append('categories', JSON.stringify(newMini.categories))
+      formData.append('types', JSON.stringify(newMini.types))
+      formData.append('proxy_types', JSON.stringify(newMini.proxy_types))
+      formData.append('tags', JSON.stringify(newMini.tags))
+      formData.append('product_sets', JSON.stringify(newMini.product_sets))
+      formData.append('painted_by', newMini.painted_by) // Use ID
 
-      if (newMini.image_path && newMini.image_path.startsWith('data:')) {
-        formData.append('image', newMini.image_path)
-      }
-
-      console.log('Sending data to add mini:', {
-        formData: Object.fromEntries(formData.entries()),
-        miniData,
-        newMini
-      })
-
+      // Send data to server
       const response = await api.post('/api/minis', formData, {
         headers: {
           'Content-Type': 'multipart/form-data'
@@ -172,35 +154,12 @@ const MiniOverviewAdd = ({ show, handleClose, categories, types, tags, productSe
 
       const responseData = response.data
 
-      // Format the new mini to match the expected structure
-      const formattedMini = {
-        ...responseData,
-        ...miniData,
-        categories: miniData.category_names ? miniData.category_names.split(',').map(cat => cat.trim()) : [],
-        types: miniData.type_names ? miniData.type_names.split(',').map(type => type.trim()) : [],
-        proxyTypes: miniData.proxy_type_names ? miniData.proxy_type_names.split(',').map(type => type.trim()) : [],
-        tags: newMini.tags,
-        formattedProductSets: miniData.product_set_names ? 
-          miniData.product_set_names.split(',').map(setName => {
-            const matches = setName.trim().match(/(.+?)\s*\((.+?)\s+by\s+(.+?)\)/)
-            if (matches) {
-              const [_, setName, productLine, manufacturer] = matches
-              return {
-                manufacturer,
-                productLine,
-                setName
-              }
-            }
-            return { setName }
-          }) : []
-      }
-
-      setMinis(prevMinis => [...prevMinis, formattedMini])
+      // Update minis state
+      setMinis(prevMinis => [...prevMinis, responseData])
       handleClose()
-      resetForm()
-    } catch (error) {
-      console.error('Error adding mini:', error)
-      setError(error.response?.data?.error || error.message)
+    } catch (err) {
+      console.error('Error adding mini:', err)
+      setError(err.response?.data?.error || 'Failed to add mini.')
     }
   }
 
@@ -218,7 +177,7 @@ const MiniOverviewAdd = ({ show, handleClose, categories, types, tags, productSe
       proxy_types: [],
       tags: [],
       product_sets: [],
-      painted_by: 'prepainted'
+      painted_by: '1'
     })
     setValidationErrors({
       name: false,
@@ -416,33 +375,18 @@ const MiniOverviewAdd = ({ show, handleClose, categories, types, tags, productSe
                       <Form.Group>
                         <Form.Label>Painted By</Form.Label>
                         <div className="d-flex gap-3">
-                          <Form.Check
-                            type="radio"
-                            id="painted-prepainted"
-                            label="Pre-Painted"
-                            name="paintedBy"
-                            value="prepainted"
-                            checked={newMini.painted_by === 'prepainted'}
-                            onChange={(e) => setNewMini(prev => ({ ...prev, painted_by: e.target.value }))}
-                          />
-                          <Form.Check
-                            type="radio"
-                            id="painted-self"
-                            label="Self"
-                            name="paintedBy"
-                            value="self"
-                            checked={newMini.painted_by === 'self'}
-                            onChange={(e) => setNewMini(prev => ({ ...prev, painted_by: e.target.value }))}
-                          />
-                          <Form.Check
-                            type="radio"
-                            id="painted-other"
-                            label="Other"
-                            name="paintedBy"
-                            value="other"
-                            checked={newMini.painted_by === 'other'}
-                            onChange={(e) => setNewMini(prev => ({ ...prev, painted_by: e.target.value }))}
-                          />
+                          {paintedByOptions.map(option => (
+                            <Form.Check
+                              key={option.id}
+                              type="radio"
+                              id={`painted-by-${option.id}`}
+                              label={option.painted_by_name}
+                              name="paintedBy"
+                              value={option.id}
+                              checked={newMini.painted_by === option.id.toString()}
+                              onChange={(e) => setNewMini(prev => ({ ...prev, painted_by: e.target.value }))}
+                            />
+                          ))}
                         </div>
                       </Form.Group>
                     </Col>

@@ -52,6 +52,17 @@ const MiniOverview = () => {
   const [showViewer, setShowViewer] = useState(false)
   const [selectedMini, setSelectedMini] = useState(null)
 
+  const processMinis = (minis) => {
+    return minis.map(mini => ({
+      ...mini,
+      painted_by: {
+        id: mini.painted_by_id,
+        name: mini.painted_by_name
+      },
+      // Other processing logic...
+    }))
+  }
+
   // First useEffect to fetch data
   useEffect(() => {
     const fetchData = async () => {
