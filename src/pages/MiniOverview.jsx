@@ -9,6 +9,7 @@ import MiniCardGrid from '../components/MiniCards/MiniCardGrid'
 import ImageModal from '../components/ImageModal'
 import { useTheme } from '../context/ThemeContext'
 import TableButton from '../components/TableButton'
+import MiniViewer from '../components/MiniViewer/MiniViewer'
 
 const styles = {
   fontSize: '0.75rem'  // Even smaller, equivalent to 12px
@@ -46,6 +47,10 @@ const MiniOverview = () => {
 
   // Add new state for search
   const [searchTerm, setSearchTerm] = useState('')
+
+  // Add new state for MiniViewer
+  const [showViewer, setShowViewer] = useState(false)
+  const [selectedMini, setSelectedMini] = useState(null)
 
   // First useEffect to fetch data
   useEffect(() => {
@@ -286,6 +291,12 @@ const MiniOverview = () => {
     return items
   }
 
+  // Add this new handler
+  const handleMiniNameClick = (mini) => {
+    setSelectedMini(mini)
+    setShowViewer(true)
+  }
+
   if (error) return <div>Error: {error}</div>
 
   return (
@@ -397,14 +408,12 @@ const MiniOverview = () => {
                       )}
                     </td>
                     <td style={{ whiteSpace: 'nowrap' }}>
-                      <a 
-                        href={`https://www.miniscollector.com/minis/gallery?title=${encodeURIComponent(mini.name)}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-decoration-none"
+                      <span 
+                        style={{ cursor: 'pointer' }}
+                        onClick={() => handleMiniNameClick(mini)}
                       >
                         {mini.name}
-                      </a>
+                      </span>
                     </td>
                     <td style={{ whiteSpace: 'nowrap' }}>{mini.location}</td>
                     <td>{mini.category_names?.split(',').join(', ')}</td>
@@ -432,13 +441,6 @@ const MiniOverview = () => {
                     <td style={{ textAlign: 'center' }}>{mini.quantity}</td>
                     <td className="action-column">
                       <div className="action-column-content">
-                        <TableButton
-                          icon={faImage}
-                          variant="info"
-                          onClick={() => handleImageClick(mini)}
-                          title="View Image"
-                          disabled={!mini.image_path}
-                        />
                         <TableButton
                           icon={faPencil}
                           variant="primary"
@@ -542,6 +544,17 @@ const MiniOverview = () => {
         }}
         imagePath={selectedImage?.path}
         miniName={selectedImage?.name}
+      />
+
+      {/* Mini Viewer Modal */}
+      <MiniViewer
+        show={showViewer}
+        onHide={() => {
+          setShowViewer(false)
+          setSelectedMini(null)
+        }}
+        mini={selectedMini}
+        darkMode={darkMode}
       />
     </Container>
   )

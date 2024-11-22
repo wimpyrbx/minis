@@ -1,10 +1,13 @@
 .mini-card {
   transition: transform 0.2s ease, box-shadow 0.2s ease;
+  border: none;
+  border-radius: 12px;
+  overflow: hidden;
 }
 
 .mini-card:hover {
   transform: translateY(-5px);
-  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.15) !important;
 }
 
 .mini-card-image-container {
@@ -14,12 +17,14 @@
   align-items: center;
   justify-content: center;
   background-color: #f8f9fa;
+  border-radius: 12px 12px 0 0;
 }
 
 .mini-card-image-container img {
   width: 100%;
   height: 100%;
   object-fit: contain;
+  padding: 0.5rem;
 }
 
 .no-image-placeholder {
@@ -32,6 +37,86 @@
   font-size: 0.9rem;
 }
 
-.mini-details {
-  min-height: 80px;
+.badge {
+  font-weight: 500;
+  padding: 0.35em 0.65em;
+  font-size: 0.75em;
+}
+
+.badge.bg-secondary {
+  background-color: #6c757d !important;
+}
+
+.badge.bg-info {
+  background-color: #0dcaf0 !important;
+}
+
+.badge.bg-warning {
+  background-color: #ffc107 !important;
+}
+
+.badge.bg-primary {
+  background-color: #0d6efd !important;
+}
+
+.badge.bg-light {
+  background-color: #f8f9fa !important;
+  border: 1px solid #dee2e6;
+}
+
+.card-body {
+  padding: 0.75rem;
+}
+
+.card-footer {
+  padding: 0.5rem 1rem 1rem;
+}
+
+/* Dark mode specific styles */
+.bg-dark .badge {
+  opacity: 0.9;
+}
+
+.bg-dark .card-body {
+  background-color: #212529;
+}
+
+.bg-dark .card-footer {
+  background-color: #212529;
+}
+
+.info-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.info-grid small {
+  font-size: 0.75rem;
+}
+
+.info-grid .badge {
+  font-size: 0.7rem;
+  font-weight: 500;
+}
+
+[data-bs-theme="dark"] .badge.bg-light {
+  background-color: #2c3034 !important;
+  border-color: #373b3e;
+  color: #e9ecef !important;
+}
+
+/* Make sections more compact */
+.mb-2 {
+  margin-bottom: 0.5rem !important;
+}
+
+/* Add subtle dividers */
+.info-grid > div:not(:last-child) {
+  border-bottom: 1px solid rgba(0,0,0,0.05);
+  padding-bottom: 0.5rem;
+}
+
+[data-bs-theme="dark"] .info-grid > div:not(:last-child) {
+  border-bottom-color: rgba(255,255,255,0.05);
 } 

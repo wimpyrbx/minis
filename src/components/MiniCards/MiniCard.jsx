@@ -44,13 +44,6 @@ const MiniCard = ({ mini, onEdit, onDelete, onImageClick }) => {
       <Card.Footer className="bg-transparent">
         <div className="d-flex justify-content-end gap-2">
           <TableButton
-            icon={faImage}
-            variant="info"
-            onClick={() => onImageClick(mini)}
-            title="View Image"
-            disabled={!mini.image_path}
-          />
-          <TableButton
             icon={faPencil}
             variant="primary"
             onClick={() => onEdit(mini)}
