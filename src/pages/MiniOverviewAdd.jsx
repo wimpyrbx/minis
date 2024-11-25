@@ -6,8 +6,16 @@ import { api } from '../database/db'
 import SearchableSelect from '../components/SearchableSelect'
 import TagInput from '../components/TagInput'
 import '../styles/ImageModal.css'
+import SearchableDropdown from '../components/SearchableDropdown'
 
 const MiniOverviewAdd = ({ show, handleClose, categories, types, tags, productSets, setMinis, minis, baseSizes }) => {
+  // Find the default product set (the one with manufacturer, product_line, and name all equal to "-")
+  const defaultProductSet = productSets.find(set => 
+    set.manufacturer_name === '-' && 
+    set.product_line_name === '-' && 
+    set.name === '-'
+  )
+
   // Form state for new mini
   const [newMini, setNewMini] = useState({
     name: '',
@@ -20,7 +28,7 @@ const MiniOverviewAdd = ({ show, handleClose, categories, types, tags, productSe
     types: [], // Array of type IDs
     proxy_types: [], // Array of type IDs for proxy uses
     tags: [], // Array of tag names
-    product_sets: [], // Array of product set IDs
+    product_sets: defaultProductSet ? [defaultProductSet.id.toString()] : [], // Set default product set
     painted_by: '1' // Default to ID 1
   })
 
@@ -176,7 +184,7 @@ const MiniOverviewAdd = ({ show, handleClose, categories, types, tags, productSe
       types: [],
       proxy_types: [],
       tags: [],
-      product_sets: [],
+      product_sets: defaultProductSet ? [defaultProductSet.id.toString()] : [],
       painted_by: '1'
     })
     setValidationErrors({
@@ -422,53 +430,24 @@ const MiniOverviewAdd = ({ show, handleClose, categories, types, tags, productSe
                       </Form.Group>
                       <Form.Group className="mb-3">
                         <Form.Label>Product Set</Form.Label>
-                        <SearchableSelect
-                          items={productSets.filter(set => !newMini.product_sets.includes(set.id.toString()))}
-                          value={newMini.product_sets}
-                          onChange={(selectedSets) => {
-                            let setIds
-                            if (Array.isArray(selectedSets)) {
-                              setIds = selectedSets.map(set => set.id.toString())
-                            } else if (selectedSets) {
-                              setIds = [selectedSets.id.toString()]
-                            } else {
-                              setIds = []
-                            }
+                        <SearchableDropdown
+                          items={productSets}
+                          value={newMini.product_sets[0] || ''}
+                          onChange={(e) => {
                             setNewMini(prev => ({
                               ...prev,
-                              product_sets: setIds
+                              product_sets: e.target.value ? [e.target.value] : []
                             }))
                           }}
                           placeholder="Search product sets..."
                           renderOption={(set) => `${set.manufacturer_name} » ${set.product_line_name} » ${set.name}`}
-                          multiple={false}
                         />
-                        <div className="mt-2">
-                          {Array.isArray(newMini.product_sets) && newMini.product_sets.map(setId => {
-                            const set = productSets.find(s => s.id.toString() === setId)
-                            return set ? (
-                              <span
-                                key={set.id}
-                                className="badge bg-primary me-1 mb-1"
-                                style={{ cursor: 'pointer' }}
-                                onClick={() => {
-                                  setNewMini(prev => ({
-                                    ...prev,
-                                    product_sets: prev.product_sets.filter(id => id !== setId)
-                                  }))
-                                }}
-                              >
-                                {`${set.manufacturer_name} » ${set.product_line_name} » ${set.name}`} ×
-                              </span>
-                            ) : null
-                          })}
-                        </div>
                       </Form.Group>
                       <Form.Group>
                         <Form.Label>Tags</Form.Label>
                         <TagInput
                           value={newMini.tags}
-                          onChange={(tags) => setNewMini({...newMini, tags})}
+                          onChange={(tags) => setNewMini(prev => ({ ...prev, tags }))}
                           existingTags={tags.map(tag => tag.name)}
                           placeholder="Type tag and press Enter or comma to add..."
                         />

@@ -534,12 +534,15 @@ const MiniOverview = () => {
       {editingMini && (
         <MiniOverviewEdit 
           show={showEditModal}
-          handleClose={() => setShowEditModal(false)}
+          handleClose={() => {
+            setShowEditModal(false)
+            setEditingMini(null)  // Clear the editing mini when closing
+          }}
           categories={categories}
           types={types}
           tags={tags}
           productSets={productSets}
-          mini={editingMini}
+          mini={editingMini}  // Pass the mini being edited
           setMinis={setMinis}
           minis={minis}
           baseSizes={baseSizes}
