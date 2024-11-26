@@ -4,10 +4,20 @@ const router = express.Router()
 // Categories endpoints
 router.get('/', async (req, res) => {
   try {
-    const categories = await req.db.all('SELECT * FROM mini_categories ORDER BY name')
+    const categories = await req.db.all(`
+      SELECT 
+        c.*,
+        COUNT(DISTINCT mtc.mini_id) as mini_count
+      FROM mini_categories c
+      LEFT JOIN mini_to_categories mtc ON c.id = mtc.category_id
+      GROUP BY c.id
+      ORDER BY c.name
+    `)
+    
     res.json(categories)
-  } catch (error) {
-    res.status(500).json({ error: error.message })
+  } catch (err) {
+    console.error('Error fetching categories:', err)
+    res.status(500).json({ error: 'Failed to fetch categories' })
   }
 })
 

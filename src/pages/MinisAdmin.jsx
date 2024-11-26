@@ -25,36 +25,49 @@ const MinisAdmin = () => {
 
   // Add columns definition
   const columns = [
-    { key: 'name', label: 'Name' },
-    { key: 'actions', label: '', className: 'actions-cell' }
+    { 
+      key: 'name', 
+      label: 'Name',
+      render: (row) => <span>{row.name}</span>
+    },
+    {
+      key: 'count',
+      label: 'Count',
+      className: 'actions-cell',
+      style: { width: '1%', whiteSpace: 'nowrap' },
+      render: (row) => row.mini_count > 0 ? row.mini_count : ''
+    },
+    { 
+      key: 'actions', 
+      label: '', 
+      className: 'actions-cell',
+      style: { width: '1%', whiteSpace: 'nowrap' },
+      render: (row) => (
+        <>
+          <TableButton
+            icon={faPencil}
+            variant="primary"
+            onClick={() => openCategoryModal(row)}
+            title="Edit Category"
+            className="me-2"
+          />
+          <TableButton
+            icon={faTrash}
+            variant="danger"
+            onClick={() => handleDeleteCategory(row.id)}
+            title="Delete Category"
+          />
+        </>
+      )
+    }
   ];
 
-  // Add renderCell function
+  // Modify renderCell function
   const renderCell = (row, column) => {
-    switch (column.key) {
-      case 'name':
-        return row.name;
-      case 'actions':
-        return (
-          <>
-            <TableButton
-              icon={faPencil}
-              variant="primary"
-              onClick={() => openCategoryModal(row)}
-              title="Edit Category"
-              className="me-2"
-            />
-            <TableButton
-              icon={faTrash}
-              variant="danger"
-              onClick={() => handleDeleteCategory(row.id)}
-              title="Delete Category"
-            />
-          </>
-        );
-      default:
-        return row[column.key];
+    if (column.render) {
+      return column.render(row);
     }
+    return row[column.key];
   };
 
   // Add these new states near the top with other state declarations
@@ -431,17 +444,42 @@ const MinisAdmin = () => {
 
               <CustomTable
                 columns={[
-                  { key: 'category', label: 'Category', className: 'dimmed-cell' },
+                  { 
+                    key: 'category', 
+                    label: 'Category', 
+                    className: 'dimmed-cell',
+                    style: { whiteSpace: 'nowrap' }
+                  },
                   { key: 'name', label: 'Name' },
-                  { key: 'actions', label: '', className: 'actions-cell' }
+                  { 
+                    key: 'count', 
+                    label: 'Count',
+                    className: 'actions-cell',
+                    render: (row) => row.type_count > 0 ? row.type_count : ''
+                  },
+                  { 
+                    key: 'proxy_count', 
+                    label: 'Proxy',
+                    className: 'actions-cell',
+                    render: (row) => row.proxy_count > 0 ? row.proxy_count : ''
+                  },
+                  { 
+                    key: 'actions', 
+                    label: '', 
+                    className: 'actions-cell',
+                    style: { width: '1%', whiteSpace: 'nowrap' }
+                  }
                 ]}
                 data={getPaginatedData(getFilteredTypes(), typesPage, entriesPerPage)}
                 renderCell={(row, column) => {
+                  if (column.render) {
+                    return column.render(row);
+                  }
                   switch (column.key) {
-                    case 'name':
-                      return row.name;
                     case 'category':
                       return row.category_name;
+                    case 'name':
+                      return row.name;
                     case 'actions':
                       return (
                         <>

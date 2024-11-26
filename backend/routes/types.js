@@ -4,14 +4,24 @@ const router = express.Router()
 router.get('/', async (req, res) => {
   try {
     const types = await req.db.all(`
-      SELECT mt.*, mc.name as category_name 
-      FROM mini_types mt
-      JOIN mini_categories mc ON mt.category_id = mc.id
-      ORDER BY mc.name, mt.name
+      SELECT 
+        t.*,
+        c.name as category_name,
+        (SELECT COUNT(DISTINCT mini_id) 
+         FROM mini_to_types 
+         WHERE type_id = t.id) as type_count,
+        (SELECT COUNT(DISTINCT mini_id) 
+         FROM mini_to_proxy_types 
+         WHERE type_id = t.id) as proxy_count
+      FROM mini_types t
+      LEFT JOIN mini_categories c ON t.category_id = c.id
+      ORDER BY c.name, t.name
     `)
+    
     res.json(types)
-  } catch (error) {
-    res.status(500).json({ error: error.message })
+  } catch (err) {
+    console.error('Error fetching types:', err)
+    res.status(500).json({ error: 'Failed to fetch types' })
   }
 })
 
