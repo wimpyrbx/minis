@@ -219,20 +219,13 @@ const ProductAdmin = () => {
         return (
           <>
             <TableButton
-              icon={faPencil}
-              variant="primary"
-              onClick={() => {
-                setEditingManufacturer(row);
-                setShowManufacturerModal(true);
-              }}
-              title="Edit Company"
+              type="edit"
+              onClick={() => openManufacturerModal(row)}
               className="me-2"
             />
             <TableButton
-              icon={faTrash}
-              variant="danger"
+              type="delete"
               onClick={() => handleDeleteManufacturer(row.id)}
-              title="Delete Company"
             />
           </>
         );
@@ -407,7 +400,28 @@ const ProductAdmin = () => {
               </Form>
 
               <CustomTable
-                columns={columns}
+                columns={[
+                  { key: 'name', label: 'Name' },
+                  { 
+                    key: 'actions', 
+                    label: '', 
+                    className: 'actions-cell',
+                    style: { width: '1%', whiteSpace: 'nowrap' },
+                    render: (row) => (
+                      <>
+                        <TableButton
+                          type="edit"
+                          onClick={() => openManufacturerModal(row)}
+                          className="me-2"
+                        />
+                        <TableButton
+                          type="delete"
+                          onClick={() => handleDeleteManufacturer(row.id)}
+                        />
+                      </>
+                    )
+                  }
+                ]}
                 data={getPaginatedData(manufacturers, manufacturersPage, entriesPerPage)}
                 renderCell={renderCell}
               />
@@ -494,7 +508,25 @@ const ProductAdmin = () => {
                 columns={[
                   { key: 'manufacturer_name', label: 'Manufacturer', className: 'dimmed-cell' },
                   { key: 'name', label: 'Name' },
-                  { key: 'actions', label: '', className: 'actions-cell' }
+                  { 
+                    key: 'actions', 
+                    label: '', 
+                    className: 'actions-cell',
+                    style: { width: '1%', whiteSpace: 'nowrap' },
+                    render: (row) => (
+                      <>
+                        <TableButton
+                          type="edit"
+                          onClick={() => openProductLineModal(row)}
+                          className="me-2"
+                        />
+                        <TableButton
+                          type="delete"
+                          onClick={() => handleDeleteProductLine(row.id)}
+                        />
+                      </>
+                    )
+                  }
                 ]}
                 data={getPaginatedData(getFilteredProductLines(), productLinesPage, entriesPerPage)}
                 renderCell={(row, column) => {
@@ -507,20 +539,13 @@ const ProductAdmin = () => {
                       return (
                         <>
                           <TableButton
-                            icon={faPencil}
-                            variant="primary"
-                            onClick={() => {
-                              setEditingProductLine(row);
-                              setShowProductLineModal(true);
-                            }}
-                            title="Edit Product Line"
+                            type="edit"
+                            onClick={() => openProductLineModal(row)}
                             className="me-2"
                           />
                           <TableButton
-                            icon={faTrash}
-                            variant="danger"
+                            type="delete"
                             onClick={() => handleDeleteProductLine(row.id)}
-                            title="Delete Product Line"
                           />
                         </>
                       );
@@ -646,7 +671,25 @@ const ProductAdmin = () => {
                   { key: 'manufacturer_name', label: 'Manufacturer', className: 'dimmed-cell' },
                   { key: 'product_line_name', label: 'Product Line', className: 'dimmed-cell' },
                   { key: 'name', label: 'Name' },
-                  { key: 'actions', label: '', className: 'actions-cell' }
+                  { 
+                    key: 'actions', 
+                    label: '', 
+                    className: 'actions-cell',
+                    style: { width: '1%', whiteSpace: 'nowrap' },
+                    render: (row) => (
+                      <>
+                        <TableButton
+                          type="edit"
+                          onClick={() => openSetModal(row)}
+                          className="me-2"
+                        />
+                        <TableButton
+                          type="delete"
+                          onClick={() => handleDeleteProductSet(row.id)}
+                        />
+                      </>
+                    )
+                  }
                 ]}
                 data={getPaginatedData(getFilteredProductSets(), productSetsPage, entriesPerPage)}
                 renderCell={(row, column) => {
@@ -661,19 +704,13 @@ const ProductAdmin = () => {
                       return (
                         <>
                           <TableButton
-                            icon={faPencil}
-                            variant="primary"
-                            onClick={() => {
-                              openProductSetModal(row);
-                            }}
-                            title="Edit Product Set"
+                            type="edit"
+                            onClick={() => openSetModal(row)}
                             className="me-2"
                           />
                           <TableButton
-                            icon={faTrash}
-                            variant="danger"
+                            type="delete"
                             onClick={() => handleDeleteProductSet(row.id)}
-                            title="Delete Product Set"
                           />
                         </>
                       );

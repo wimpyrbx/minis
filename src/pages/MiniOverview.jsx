@@ -413,7 +413,7 @@ const MiniOverview = () => {
                   <th>Product Sets</th>
                   <th style={{ width: '150px', maxWidth: '150px' }}>Tags</th>
                   <th style={{ textAlign: 'center' }}>QTY</th>
-                  <th className="action-column"></th>
+                  <th className="actions-cell"></th>
                 </tr>
               </thead>
               <tbody>
@@ -470,21 +470,16 @@ const MiniOverview = () => {
                       {mini.tag_names?.split(',').join(', ')}
                     </td>
                     <td style={{ textAlign: 'center' }}>{mini.quantity}</td>
-                    <td className="action-column">
-                      <div className="action-column-content">
-                        <TableButton
-                          icon={faPencil}
-                          variant="primary"
-                          onClick={() => handleEditMini(mini)}
-                          title="Edit Mini"
-                        />
-                        <TableButton
-                          icon={faTrash}
-                          variant="danger"
-                          onClick={() => handleDeleteMini(mini.id)}
-                          title="Delete Mini"
-                        />
-                      </div>
+                    <td className="actions-cell">
+                      <TableButton
+                        type="edit"
+                        onClick={() => handleEditMini(mini)}
+                        className="me-2"
+                      />
+                      <TableButton
+                        type="delete"
+                        onClick={() => handleDeleteMini(mini.id)}
+                      />
                     </td>
                   </tr>
                 ))}

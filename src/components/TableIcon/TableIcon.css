@@ -1,0 +1,66 @@
+.table-action-icon {
+  transition: all 0.2s ease;
+  cursor: pointer !important;
+  font-size: 0.8rem !important;
+}
+
+.table-action-icon:hover {
+  transform: scale(1.2);
+  filter: brightness(1.2);
+}
+
+.table-action-icon:active {
+  transform: scale(0.95);
+  filter: brightness(0.9);
+}
+
+.table-action-icon.disabled {
+  opacity: 0.5;
+  cursor: not-allowed !important;
+}
+
+.table-action-icon.disabled:hover {
+  transform: none;
+  filter: none;
+}
+
+/* Color variants */
+.table-action-icon.primary {
+  color: #0d6efd !important;
+}
+
+.table-action-icon.primary:hover {
+  color: #2b7ef7 !important;
+}
+
+.table-action-icon.danger {
+  color: #dc3545 !important;
+}
+
+.table-action-icon.danger:hover {
+  color: #fb4d5b !important;
+}
+
+.table-action-icon.success {
+  color: #198754 !important;
+}
+
+.table-action-icon.success:hover {
+  color: #157347 !important;
+}
+
+.table-action-icon.warning {
+  color: #ffc107 !important;
+}
+
+.table-action-icon.warning:hover {
+  color: #ffca2c !important;
+}
+
+.table-action-icon.info {
+  color: #0dcaf0 !important;
+}
+
+.table-action-icon.info:hover {
+  color: #31d2f2 !important;
+} 

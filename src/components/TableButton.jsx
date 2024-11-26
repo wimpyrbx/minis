@@ -1,48 +1,46 @@
 import React from 'react'
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import PropTypes from 'prop-types'
+import { faCircleMinus, faFileEdit } from '@fortawesome/free-solid-svg-icons'
+import TableIcon from './TableIcon/TableIcon'
 
-const TableButton = ({ 
-  icon, 
-  onClick, 
-  variant = 'primary',
-  title,
-  className = '',
-  disabled = false
-}) => {
-  const getColorClass = () => {
-    switch (variant) {
-      case 'danger':
-        return 'text-danger'
-      case 'success':
-        return 'text-success'
-      case 'info':
-        return 'text-info'
-      case 'primary':
-      default:
-        return 'text-primary'
-    }
+// Common variants definition
+const VARIANTS = {
+  edit: {
+    icon: faFileEdit,
+    variant: 'primary',
+    title: 'Edit',
+    size: 'sm'
+  },
+  delete: {
+    icon: faCircleMinus,
+    variant: 'danger',
+    title: 'Delete',
+    size: 'sm'
   }
-
-  return (
-    <FontAwesomeIcon
-      icon={icon}
-      onClick={disabled ? undefined : onClick}
-      title={title}
-      className={`table-action-icon ${getColorClass()} ${className} ${disabled ? 'disabled' : ''}`}
-      style={{ cursor: disabled ? 'not-allowed' : 'pointer' }}
-      fixedWidth
-    />
-  )
 }
 
-TableButton.propTypes = {
-  icon: PropTypes.object.isRequired,
-  onClick: PropTypes.func.isRequired,
-  variant: PropTypes.string,
-  title: PropTypes.string,
-  className: PropTypes.string,
-  disabled: PropTypes.bool
+const TableButton = ({ 
+  type,              
+  icon,              
+  variant = 'primary',
+  onClick,
+  title,
+  className = '',
+  disabled = false,
+  size
+}) => {
+  // If type is provided, use predefined variant
+  const variantProps = type ? VARIANTS[type] : { icon, variant, title }
+
+  return (
+    <TableIcon
+      icon={variantProps.icon}
+      variant={variantProps.variant}
+      onClick={disabled ? undefined : onClick}
+      title={title || variantProps.title}
+      className={`${className} ${disabled ? 'disabled' : ''}`}
+      size={size || variantProps.size}
+    />
+  )
 }
 
 export default TableButton 

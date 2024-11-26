@@ -45,17 +45,13 @@ const MinisAdmin = () => {
       render: (row) => (
         <>
           <TableButton
-            icon={faPencil}
-            variant="primary"
+            type="edit"
             onClick={() => openCategoryModal(row)}
-            title="Edit Category"
             className="me-2"
           />
           <TableButton
-            icon={faTrash}
-            variant="danger"
+            type="delete"
             onClick={() => handleDeleteCategory(row.id)}
-            title="Delete Category"
           />
         </>
       )
@@ -484,17 +480,13 @@ const MinisAdmin = () => {
                       return (
                         <>
                           <TableButton
-                            icon={faPencil}
-                            variant="primary"
+                            type="edit"
                             onClick={() => openTypeModal(row)}
-                            title="Edit Type"
                             className="me-2"
                           />
                           <TableButton
-                            icon={faTrash}
-                            variant="danger"
+                            type="delete"
                             onClick={() => handleDeleteType(row.id)}
-                            title="Delete Type"
                           />
                         </>
                       );
