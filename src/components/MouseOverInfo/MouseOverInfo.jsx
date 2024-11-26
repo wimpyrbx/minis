@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react'
-import { Overlay, Popover } from 'react-bootstrap'
+import React, { useEffect, useState } from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
+import { Overlay } from 'react-bootstrap'
+import './MouseOverInfo.css'
 
 const MouseOverInfo = ({ 
   show, 
@@ -10,108 +11,87 @@ const MouseOverInfo = ({
   headerColor = 'primary',
   children,
   onMouseEnter,
-  onMouseLeave 
+  onMouseLeave
 }) => {
-  const [position, setPosition] = useState({ left: 0, top: 0 })
-  const contentRef = useRef(null)
-  const [contentWidth, setContentWidth] = useState(0)
-  const timeoutRef = useRef(null)
+  const [showOverlay, setShowOverlay] = useState(false)
+  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 })
 
-  // Track content width
   useEffect(() => {
-    if (contentRef.current && show) {
-      const tempDiv = document.createElement('div')
-      tempDiv.style.position = 'absolute'
-      tempDiv.style.visibility = 'hidden'
-      tempDiv.style.whiteSpace = 'nowrap'
-      tempDiv.innerHTML = contentRef.current.innerHTML
-      document.body.appendChild(tempDiv)
-      
-      // Get the width of the content
-      const width = Math.max(
-        tempDiv.querySelector('.popover-header')?.offsetWidth || 0,
-        tempDiv.querySelector('.popover-body')?.offsetWidth || 0
-      )
-      
-      document.body.removeChild(tempDiv)
-      setContentWidth(width + 40) // Add padding
-    }
-  }, [show, children, title])
+    setShowOverlay(show)
+  }, [show])
 
   useEffect(() => {
     const handleMouseMove = (e) => {
       if (show) {
-        if (timeoutRef.current) {
-          clearTimeout(timeoutRef.current)
-        }
-
-        // Update position - offset to the left of cursor
-        setPosition({ 
-          left: e.clientX - 15,  // Slight offset from cursor
-          top: e.clientY
-        })
+        setMousePosition({ x: e.clientX, y: e.clientY })
       }
     }
 
     document.addEventListener('mousemove', handleMouseMove)
-    return () => {
-      document.removeEventListener('mousemove', handleMouseMove)
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current)
-      }
-    }
+    return () => document.removeEventListener('mousemove', handleMouseMove)
   }, [show])
+
+  const handleMouseEnter = () => {
+    if (typeof onMouseEnter === 'function') {
+      onMouseEnter()
+    }
+  }
+
+  const handleMouseLeave = () => {
+    if (typeof onMouseLeave === 'function') {
+      onMouseLeave()
+    }
+  }
 
   return (
     <Overlay
-      show={show}
+      show={showOverlay}
       target={target}
       placement="left"
-      containerPadding={20}
+      offset={[-10, 0]}
       popperConfig={{
-        strategy: 'fixed',
         modifiers: [
-          {
-            name: 'offset',
-            options: {
-              offset: [0, -10],
-            },
-          },
           {
             name: 'preventOverflow',
             options: {
-              padding: 8,
-            },
+              boundary: 'viewport',
+              padding: 8
+            }
           }
-        ],
+        ]
       }}
     >
-      <Popover 
-        ref={contentRef}
-        onMouseEnter={onMouseEnter}
-        onMouseLeave={(e) => {
-          timeoutRef.current = setTimeout(() => {
-            onMouseLeave(e)
-          }, 50)
-        }}
-        style={{
-          position: 'fixed',
-          left: `${position.left}px`,
-          top: `${position.top}px`,
-          transform: 'translate(-100%, -50%)',
-          width: contentWidth ? `${contentWidth}px` : 'auto',
-          minWidth: '200px',
-          maxWidth: '400px'
-        }}
-      >
-        <Popover.Header className={`bg-${headerColor} text-white`}>
-          {icon && <FontAwesomeIcon icon={icon} className="me-2" />}
-          {title}
-        </Popover.Header>
-        <Popover.Body>
-          {children}
-        </Popover.Body>
-      </Popover>
+      {({
+        placement: _placement,
+        arrowProps: _arrowProps,
+        show: _show,
+        popper: _popper,
+        hasDoneInitialMeasure: _hasDoneInitialMeasure,
+        ...props
+      }) => (
+        <div
+          {...props}
+          className="mouse-over-info"
+          onMouseEnter={handleMouseEnter}
+          onMouseLeave={handleMouseLeave}
+          style={{
+            ...props.style,
+            position: 'fixed',
+            left: `${mousePosition.x - 10}px`,
+            top: `${mousePosition.y - 10}px`,
+            transform: 'translate(-100%, -100%)',
+            zIndex: 9999
+          }}
+        >
+          <div className={`mouse-over-info-header bg-${headerColor}`}>
+            {icon && <FontAwesomeIcon icon={icon} className="me-2" />}
+            {title}
+          </div>
+          <div className="mouse-over-info-body">
+            {children}
+          </div>
+        </div>
+      )}
     </Overlay>
   )
 }

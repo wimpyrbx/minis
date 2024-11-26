@@ -7,6 +7,7 @@ import SearchableSelect from '../components/SearchableSelect'
 import TagInput from '../components/TagInput'
 import '../styles/ImageModal.css'
 import SearchableDropdown from '../components/SearchableDropdown'
+import Pill from '../components/Pill/Pill'
 
 const MiniOverviewEdit = ({ show, handleClose, categories, types, tags, productSets, setMinis, minis, baseSizes, mini }) => {
   // Form state for new mini
@@ -181,7 +182,7 @@ const MiniOverviewEdit = ({ show, handleClose, categories, types, tags, productS
     }
 
     try {
-      // Instead of FormData, let's send a regular JSON object
+      // Prepare data for API
       const miniData = {
         name: newMini.name.trim(),
         description: newMini.description?.trim() || null,
@@ -192,18 +193,15 @@ const MiniOverviewEdit = ({ show, handleClose, categories, types, tags, productS
         types: newMini.types,
         proxy_types: newMini.proxy_types,
         tags: newMini.tags,
-        product_set_id: newMini.product_sets[0] || null,  // Send single ID instead of array
+        product_set_id: newMini.product_sets[0] || null,
         painted_by_id: newMini.painted_by
       }
 
-      // Send data to server using PUT
+      // Send data to server
       const response = await api.put(`/api/minis/${mini.id}`, miniData)
-
-      const responseData = response.data
-
-      // Call setMinis with the updated mini
-      setMinis(responseData)  // This will now trigger the animation
       
+      // Pass the updated mini data to parent component
+      setMinis(prevMinis => prevMinis.map(m => m.id === mini.id ? response.data : m))
       handleClose()
     } catch (err) {
       console.error('Error saving changes to mini:', err)
@@ -493,7 +491,23 @@ const MiniOverviewEdit = ({ show, handleClose, categories, types, tags, productS
                           onChange={(tags) => setNewMini(prev => ({ ...prev, tags }))}
                           existingTags={tags.map(tag => tag.name)}
                           placeholder="Type tag and press Enter or comma to add..."
+                          renderTags={false}
                         />
+                        <div className="mt-2">
+                          {Array.isArray(newMini.tags) && newMini.tags.map((tag, index) => (
+                            <Pill
+                              key={`tag-${index}`}
+                              text={tag}
+                              variant="tag"
+                              onClick={() => {
+                                setNewMini(prev => ({
+                                  ...prev,
+                                  tags: prev.tags.filter((_, i) => i !== index)
+                                }))
+                              }}
+                            />
+                          ))}
+                        </div>
                       </Form.Group>
                     </Col>
                   </Row>
@@ -559,17 +573,15 @@ const MiniOverviewEdit = ({ show, handleClose, categories, types, tags, productS
                       multiple
                     />
                     <div className="mt-2">
-                      {Array.isArray(newMini.categories) && newMini.categories.map(catId => {
-                        const category = categories.find(c => c.id.toString() === catId)
+                      {Array.isArray(newMini.categories) && newMini.categories.map(categoryId => {
+                        const category = categories.find(c => c.id.toString() === categoryId)
                         return category ? (
-                          <span
+                          <Pill
                             key={category.id}
-                            className="badge bg-secondary me-1 mb-1"
-                            style={{ cursor: 'pointer' }}
-                            onClick={() => handleCategoryChange(catId)}
-                          >
-                            {category.name} ×
-                          </span>
+                            text={category.name}
+                            variant="category"
+                            onClick={() => handleCategoryChange(categoryId)}
+                          />
                         ) : null
                       })}
                     </div>
@@ -614,24 +626,21 @@ const MiniOverviewEdit = ({ show, handleClose, categories, types, tags, productS
                         const type = types.find(t => t.id.toString() === typeId)
                         const category = type ? categories.find(c => c.id.toString() === type.category_id.toString()) : null
                         return type ? (
-                          <span
+                          <Pill
                             key={type.id}
-                            className="badge bg-info me-1 mb-1"
-                            style={{ cursor: 'pointer' }}
+                            text={`${category?.name || ''}: ${type.name}`}
+                            variant="type"
                             onClick={() => {
                               setNewMini(prev => {
                                 const updatedTypes = prev.types.filter(id => id !== typeId)
                                 return {
                                   ...prev,
                                   types: updatedTypes,
-                                  // Clear proxy types if no types remain
                                   proxy_types: updatedTypes.length === 0 ? [] : prev.proxy_types
                                 }
                               })
                             }}
-                          >
-                            {`${category?.name || ''}: ${type.name}`} ×
-                          </span>
+                          />
                         ) : null
                       })}
                     </div>
@@ -667,20 +676,19 @@ const MiniOverviewEdit = ({ show, handleClose, categories, types, tags, productS
                     <div className="mt-2">
                       {Array.isArray(newMini.proxy_types) && newMini.proxy_types.map(typeId => {
                         const type = types.find(t => t.id.toString() === typeId)
+                        const category = type ? categories.find(c => c.id.toString() === type.category_id.toString()) : null
                         return type ? (
-                          <span
+                          <Pill
                             key={type.id}
-                            className="badge bg-warning text-dark me-1 mb-1"
-                            style={{ cursor: 'pointer' }}
+                            text={`${category?.name || ''}: ${type.name}`}
+                            variant="proxytype"
                             onClick={() => {
                               setNewMini(prev => ({
                                 ...prev,
                                 proxy_types: prev.proxy_types.filter(id => id !== typeId)
                               }))
                             }}
-                          >
-                            {`${type.category_name}: ${type.name}`} ×
-                          </span>
+                          />
                         ) : null
                       })}
                     </div>

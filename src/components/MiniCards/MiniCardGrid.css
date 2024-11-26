@@ -1,0 +1,7 @@
+.mini-card-image {
+  transition: transform 0.2s;
+}
+
+.mini-card-image:hover {
+  transform: scale(1.05);
+} 

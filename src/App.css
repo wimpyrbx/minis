@@ -124,7 +124,6 @@
 
 /* Text styles */
 .text-muted {
-  font-size: 0.8rem !important;
 }
 
 [data-bs-theme="dark"] .text-muted {

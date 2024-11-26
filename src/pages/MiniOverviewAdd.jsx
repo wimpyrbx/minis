@@ -7,6 +7,7 @@ import SearchableSelect from '../components/SearchableSelect'
 import TagInput from '../components/TagInput'
 import '../styles/ImageModal.css'
 import SearchableDropdown from '../components/SearchableDropdown'
+import Pill from '../components/Pill/Pill'
 
 const MiniOverviewAdd = ({ show, handleClose, categories, types, tags, productSets, setMinis, minis, baseSizes }) => {
   // Find the default product set (the one with manufacturer, product_line, and name all equal to "-")
@@ -139,31 +140,8 @@ const MiniOverviewAdd = ({ show, handleClose, categories, types, tags, productSe
     }
 
     try {
-      // Prepare form data
-      const formData = new FormData()
-      formData.append('name', newMini.name.trim())
-      formData.append('description', newMini.description.trim())
-      formData.append('location', newMini.location.trim())
-      formData.append('quantity', newMini.quantity)
-      formData.append('base_size_id', newMini.base_size_id)
-      formData.append('categories', JSON.stringify(newMini.categories))
-      formData.append('types', JSON.stringify(newMini.types))
-      formData.append('proxy_types', JSON.stringify(newMini.proxy_types))
-      formData.append('tags', JSON.stringify(newMini.tags))
-      formData.append('product_sets', JSON.stringify(newMini.product_sets))
-      formData.append('painted_by', newMini.painted_by) // Use ID
-
-      // Send data to server
-      const response = await api.post('/api/minis', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data'
-        }
-      })
-
-      const responseData = response.data
-
-      // Update minis state
-      setMinis(prevMinis => [...prevMinis, responseData])
+      // Just pass the data to parent component
+      setMinis(newMini)
       handleClose()
     } catch (err) {
       console.error('Error adding mini:', err)
@@ -450,7 +428,23 @@ const MiniOverviewAdd = ({ show, handleClose, categories, types, tags, productSe
                           onChange={(tags) => setNewMini(prev => ({ ...prev, tags }))}
                           existingTags={tags.map(tag => tag.name)}
                           placeholder="Type tag and press Enter or comma to add..."
+                          renderTags={false}
                         />
+                        <div className="mt-2">
+                          {Array.isArray(newMini.tags) && newMini.tags.map((tag, index) => (
+                            <Pill
+                              key={`tag-${index}`}
+                              text={tag}
+                              variant="tag"
+                              onClick={() => {
+                                setNewMini(prev => ({
+                                  ...prev,
+                                  tags: prev.tags.filter((_, i) => i !== index)
+                                }))
+                              }}
+                            />
+                          ))}
+                        </div>
                       </Form.Group>
                     </Col>
                   </Row>
@@ -516,17 +510,23 @@ const MiniOverviewAdd = ({ show, handleClose, categories, types, tags, productSe
                       multiple
                     />
                     <div className="mt-2">
-                      {Array.isArray(newMini.categories) && newMini.categories.map(catId => {
-                        const category = categories.find(c => c.id.toString() === catId)
+                      {Array.isArray(newMini.categories) && newMini.categories.map(categoryId => {
+                        const category = categories.find(c => c.id.toString() === categoryId)
                         return category ? (
-                          <span
+                          <Pill
                             key={category.id}
-                            className="badge bg-secondary me-1 mb-1"
-                            style={{ cursor: 'pointer' }}
-                            onClick={() => handleCategoryChange(catId)}
-                          >
-                            {category.name} ×
-                          </span>
+                            text={category.name}
+                            variant="category"
+                            onClick={() => {
+                              setNewMini(prev => ({
+                                ...prev,
+                                categories: prev.categories.filter(id => id !== categoryId),
+                                // Clear types and proxy_types if no categories remain
+                                types: [],
+                                proxy_types: []
+                              }))
+                            }}
+                          />
                         ) : null
                       })}
                     </div>
@@ -571,24 +571,21 @@ const MiniOverviewAdd = ({ show, handleClose, categories, types, tags, productSe
                         const type = types.find(t => t.id.toString() === typeId)
                         const category = type ? categories.find(c => c.id.toString() === type.category_id.toString()) : null
                         return type ? (
-                          <span
+                          <Pill
                             key={type.id}
-                            className="badge bg-info me-1 mb-1"
-                            style={{ cursor: 'pointer' }}
+                            text={`${category?.name || ''}: ${type.name}`}
+                            variant="type"
                             onClick={() => {
                               setNewMini(prev => {
                                 const updatedTypes = prev.types.filter(id => id !== typeId)
                                 return {
                                   ...prev,
                                   types: updatedTypes,
-                                  // Clear proxy types if no types remain
                                   proxy_types: updatedTypes.length === 0 ? [] : prev.proxy_types
                                 }
                               })
                             }}
-                          >
-                            {`${category?.name || ''}: ${type.name}`} ×
-                          </span>
+                          />
                         ) : null
                       })}
                     </div>
@@ -624,20 +621,19 @@ const MiniOverviewAdd = ({ show, handleClose, categories, types, tags, productSe
                     <div className="mt-2">
                       {Array.isArray(newMini.proxy_types) && newMini.proxy_types.map(typeId => {
                         const type = types.find(t => t.id.toString() === typeId)
+                        const category = type ? categories.find(c => c.id.toString() === type.category_id.toString()) : null
                         return type ? (
-                          <span
+                          <Pill
                             key={type.id}
-                            className="badge bg-warning text-dark me-1 mb-1"
-                            style={{ cursor: 'pointer' }}
+                            text={`${category?.name || ''}: ${type.name}`}
+                            variant="proxytype"
                             onClick={() => {
                               setNewMini(prev => ({
                                 ...prev,
                                 proxy_types: prev.proxy_types.filter(id => id !== typeId)
                               }))
                             }}
-                          >
-                            {`${type.category_name}: ${type.name}`} ×
-                          </span>
+                          />
                         ) : null
                       })}
                     </div>

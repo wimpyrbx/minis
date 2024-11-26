@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { Form } from 'react-bootstrap'
 
-const TagInput = ({ value = [], onChange, existingTags = [], placeholder }) => {
+const TagInput = ({ value = [], onChange, existingTags = [], placeholder = '', renderTags = true }) => {
   const [input, setInput] = useState('')
   const [suggestions, setSuggestions] = useState([])
 
@@ -66,18 +66,20 @@ const TagInput = ({ value = [], onChange, existingTags = [], placeholder }) => {
           ))}
         </div>
       )}
-      <div className="mt-2">
-        {value.map((tag, index) => (
-          <span
-            key={index}
-            className="badge bg-primary me-1 mb-1"
-            style={{ cursor: 'pointer' }}
-            onClick={() => handleRemoveTag(tag)}
-          >
-            {tag} ×
-          </span>
-        ))}
-      </div>
+      {renderTags && (
+        <div className="mt-2">
+          {value.map((tag, index) => (
+            <span
+              key={index}
+              className="badge bg-primary me-1 mb-1"
+              style={{ cursor: 'pointer' }}
+              onClick={() => handleRemoveTag(tag)}
+            >
+              {tag} ×
+            </span>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
