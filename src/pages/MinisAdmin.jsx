@@ -6,6 +6,7 @@ import { api } from '../database/db'
 import TableButton from '../components/TableButton'
 import CustomTable from '../components/Table/Table'
 import PageHeader from '../components/PageHeader/PageHeader'
+import AddButton from '../components/Buttons/AddButton'
 
 const MinisAdmin = () => {
   const [categories, setCategories] = useState([])
@@ -347,15 +348,7 @@ const MinisAdmin = () => {
                     </div>
                   </Col>
                   <Col xs="auto">
-                    <Button 
-                      type="submit" 
-                      variant="light" 
-                      className="border"
-                      disabled={!isValidCategory(newCategory)}
-                    >
-                      <FontAwesomeIcon icon={faPlus} className="me-2 text-success" />
-                      Add
-                    </Button>
+                    <AddButton disabled={!isValidCategory(newCategory)} />
                   </Col>
                 </Row>
               </Form>
@@ -428,15 +421,7 @@ const MinisAdmin = () => {
                     </div>
                   </Col>
                   <Col xs="auto">
-                    <Button 
-                      type="submit" 
-                      variant="light" 
-                      className="border"
-                      disabled={!isValidType(newType)}
-                    >
-                      <FontAwesomeIcon icon={faPlus} className="me-2 text-success" />
-                      Add
-                    </Button>
+                    <AddButton disabled={!isValidType(newType)} />
                   </Col>
                 </Row>
               </Form>

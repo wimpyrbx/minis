@@ -6,6 +6,7 @@ import { api } from '../database/db'
 import TableButton from '../components/TableButton'
 import CustomTable from '../components/Table/Table'
 import PageHeader from '../components/PageHeader/PageHeader'
+import AddButton from '../components/Buttons/AddButton'
 
 const ProductAdmin = () => {
   const [manufacturers, setManufacturers] = useState([])
@@ -362,7 +363,7 @@ const ProductAdmin = () => {
 
       <Row>
         {/* Manufacturers Card */}
-        <Col md={3}>
+        <Col md={2}>
           <Card className="mb-4">
             <Card.Body className="pb-0 pt-2">
               <div className="d-flex justify-content-between align-items-center mb-2" style={{ minHeight: '32px' }}>
@@ -392,15 +393,7 @@ const ProductAdmin = () => {
                     </div>
                   </Col>
                   <Col xs="auto">
-                    <Button 
-                      type="submit" 
-                      variant="light" 
-                      className="border"
-                      disabled={!isValidManufacturer(newManufacturer)}
-                    >
-                      <FontAwesomeIcon icon={faPlus} className="me-2 text-success" />
-                      Add
-                    </Button>
+                    <AddButton disabled={!isValidManufacturer(newManufacturer)} />
                   </Col>
                 </Row>
               </Form>
@@ -498,15 +491,7 @@ const ProductAdmin = () => {
                     </div>
                   </Col>
                   <Col xs="auto">
-                    <Button 
-                      type="submit" 
-                      variant="light" 
-                      className="border"
-                      disabled={!isValidProductLine(newProductLine)}
-                    >
-                      <FontAwesomeIcon icon={faPlus} className="me-2 text-success" />
-                      Add
-                    </Button>
+                    <AddButton disabled={!isValidProductLine(newProductLine)} />
                   </Col>
                 </Row>
               </Form>
@@ -571,7 +556,7 @@ const ProductAdmin = () => {
         </Col>
 
         {/* Product Sets Card */}
-        <Col md={5}>
+        <Col md={6}>
           <Card className="mb-4">
             <Card.Body className="pb-0 pt-2">
               <div className="d-flex justify-content-between align-items-center mb-2" style={{ minHeight: '32px' }}>
@@ -609,7 +594,7 @@ const ProductAdmin = () => {
                       </Form.Select>
                     </div>
                   </Col>
-                  <Col md={4}>
+                  <Col md={3}>
                     <div className="position-relative">
                       <FontAwesomeIcon 
                         icon={faBoxes} 
@@ -660,15 +645,7 @@ const ProductAdmin = () => {
                     </div>
                   </Col>
                   <Col xs="auto">
-                    <Button 
-                      type="submit" 
-                      variant="light" 
-                      className="border"
-                      disabled={!isValidProductSet(newProductSet)}
-                    >
-                      <FontAwesomeIcon icon={faPlus} className="me-2 text-success" />
-                      Add
-                    </Button>
+                    <AddButton disabled={!isValidProductSet(newProductSet)} />
                   </Col>
                 </Row>
               </Form>
