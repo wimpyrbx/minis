@@ -13,7 +13,7 @@ import {
 } from 'react-bootstrap'
 import { faCode } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import PageHeader from '../components/PageHeader'
+import PageHeader from '../components/PageHeader/PageHeader'
 
 const endpoints = {
   'Database Management': [
@@ -467,36 +467,32 @@ const ApiViewer = () => {
     <Container fluid className="content">
       <PageHeader
         icon={faCode}
-        iconColor="text-info"
+        iconColor="text-primary"
         title="API Viewer"
         subtitle="Test and explore available API endpoints"
       />
 
-      <Row>
-        <Col>
-          <Card>
-            <Card.Body className="p-0">
-              <Accordion>
-                {Object.entries(endpoints).map(([category, endpoints]) => (
-                  <Accordion.Item key={category} eventKey={category}>
-                    <Accordion.Header className="py-2">
-                      <span className="fw-bold">{category}</span>
-                      <span className="text-muted ms-2 small">
-                        ({endpoints.length} endpoint{endpoints.length !== 1 ? 's' : ''})
-                      </span>
-                    </Accordion.Header>
-                    <Accordion.Body className="bg-light p-2">
-                      {endpoints.map((endpoint, index) => (
-                        <ApiEndpoint key={index} {...endpoint} />
-                      ))}
-                    </Accordion.Body>
-                  </Accordion.Item>
-                ))}
-              </Accordion>
-            </Card.Body>
-          </Card>
-        </Col>
-      </Row>
+      <Card>
+        <Card.Body className="p-0">
+          <Accordion>
+            {Object.entries(endpoints).map(([category, endpoints]) => (
+              <Accordion.Item key={category} eventKey={category}>
+                <Accordion.Header className="py-2">
+                  <span className="fw-bold">{category}</span>
+                  <span className="text-muted ms-2 small">
+                    ({endpoints.length} endpoint{endpoints.length !== 1 ? 's' : ''})
+                  </span>
+                </Accordion.Header>
+                <Accordion.Body className="bg-light p-2">
+                  {endpoints.map((endpoint, index) => (
+                    <ApiEndpoint key={index} {...endpoint} />
+                  ))}
+                </Accordion.Body>
+              </Accordion.Item>
+            ))}
+          </Accordion>
+        </Card.Body>
+      </Card>
     </Container>
   )
 }

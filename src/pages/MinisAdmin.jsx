@@ -286,24 +286,29 @@ const MinisAdmin = () => {
     <Container fluid className="content">
       <PageHeader
         icon={faCubes}
-        iconColor="text-success"
+        iconColor="text-primary"
         title="Minis Admin"
         subtitle="Manage categories and types"
       >
         <div className="d-flex align-items-center justify-content-end">
-          <span className="text-muted me-2">Show</span>
+          <span className="text-muted me-2" style={{ fontSize: '0.875rem' }}>Show</span>
           <Form.Select 
             size="sm" 
             value={entriesPerPage} 
             onChange={handleEntriesPerPageChange}
-            style={{ width: '70px' }}
+            style={{ 
+              width: '60px',
+              fontSize: '0.875rem',
+              padding: '0.25rem 0.5rem',
+              height: 'auto'
+            }}
             className="mx-2"
           >
             <option value="10">10</option>
             <option value="25">25</option>
             <option value="50">50</option>
           </Form.Select>
-          <span className="text-muted">entries</span>
+          <span className="text-muted" style={{ fontSize: '0.875rem' }}>entries</span>
         </div>
       </PageHeader>
 
@@ -314,13 +319,12 @@ const MinisAdmin = () => {
         <Col md={5}>
           <Card className="mb-4">
             <Card.Body className="pb-0">
-              <div className="d-flex align-items-center mb-4">
-                <FontAwesomeIcon icon={faLayerGroup} className="text-success me-2" />
-                <h5 className="mb-0">Categories</h5>
-              </div>
-
-              <Form onSubmit={handleAddCategory} className="mb-3">
-                <Row className="g-2">
+              <div className="d-flex justify-content-between align-items-center mb-3">
+                <div className="d-flex align-items-center">
+                  <FontAwesomeIcon icon={faLayerGroup} className="text-info me-2" />
+                  <h5 className="mb-0">Categories</h5>
+                </div>
+                <Form onSubmit={handleAddCategory} className="d-flex gap-2">
                   <Col>
                     <div className="position-relative">
                       <FontAwesomeIcon 
@@ -351,8 +355,8 @@ const MinisAdmin = () => {
                       Add
                     </Button>
                   </Col>
-                </Row>
-              </Form>
+                </Form>
+              </div>
 
               <CustomTable
                 columns={columns}
@@ -370,15 +374,14 @@ const MinisAdmin = () => {
 
         {/* Types Card */}
         <Col md={7}>
-          <Card className="mb-4">
+          <Card>
             <Card.Body className="pb-0">
-              <div className="d-flex align-items-center mb-4">
-                <FontAwesomeIcon icon={faCube} className="text-success me-2" />
-                <h5 className="mb-0">Types</h5>
-              </div>
-
-              <Form onSubmit={handleAddType} className="mb-3">
-                <Row className="g-2">
+              <div className="d-flex justify-content-between align-items-center mb-3">
+                <div className="d-flex align-items-center">
+                  <FontAwesomeIcon icon={faCube} className="text-info me-2" />
+                  <h5 className="mb-0">Types</h5>
+                </div>
+                <Form onSubmit={handleAddType} className="d-flex gap-2">
                   <Col md={5}>
                     <div className="position-relative">
                       <FontAwesomeIcon 
@@ -435,8 +438,8 @@ const MinisAdmin = () => {
                       Add
                     </Button>
                   </Col>
-                </Row>
-              </Form>
+                </Form>
+              </div>
 
               <CustomTable
                 columns={[

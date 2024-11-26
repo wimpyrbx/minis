@@ -11,6 +11,7 @@ import { useTheme } from '../context/ThemeContext'
 import TableButton from '../components/TableButton'
 import MiniViewer from '../components/MiniViewer/MiniViewer'
 import '../styles/TableHighlight.css'
+import PageHeader from '../components/PageHeader/PageHeader'
 
 const styles = {
   fontSize: '0.75rem'  // Even smaller, equivalent to 12px
@@ -329,15 +330,39 @@ const MiniOverview = () => {
 
   return (
     <Container fluid className="content" style={styles}>
-      <Card className="mb-4">
-        <Card.Body className="d-flex align-items-center">
-          <FontAwesomeIcon icon={faPhotoFilm} className="text-info me-3" size="2x" />
-          <div>
-            <h4 className="mb-0">Mini Overview</h4>
-            <small className="text-muted">View and manage your miniature collection</small>
+      <PageHeader
+        icon={faPhotoFilm}
+        iconColor="text-info"
+        title="Mini Overview"
+        subtitle="View and manage your miniature collection"
+      >
+        <div className="d-flex align-items-center gap-2">
+          <Button 
+            variant="light" 
+            className="border d-flex align-items-center" 
+            onClick={() => setShowAddModal(true)}
+          >
+            <FontAwesomeIcon icon={faPlus} className="me-2 text-success" />
+            Add New Mini
+          </Button>
+          <div className="btn-group">
+            <Button 
+              variant={viewType === 'table' ? 'primary' : 'light'} 
+              className="border d-flex align-items-center" 
+              onClick={() => handleViewTypeChange('table')}
+            >
+              <FontAwesomeIcon icon={faList} />
+            </Button>
+            <Button 
+              variant={viewType === 'grid' ? 'primary' : 'light'} 
+              className="border d-flex align-items-center" 
+              onClick={() => handleViewTypeChange('grid')}
+            >
+              <FontAwesomeIcon icon={faTableCells} />
+            </Button>
           </div>
-        </Card.Body>
-      </Card>
+        </div>
+      </PageHeader>
 
       <div className="bg-white p-4 rounded shadow-sm">
         <div className="d-flex justify-content-between align-items-center mb-4">
@@ -368,34 +393,7 @@ const MiniOverview = () => {
               className="me-4"
               style={{ width: '200px' }}
             />
-            <div className="btn-group me-4">  
-              <Button 
-                variant={viewType === 'table' ? 'light' : 'outline-light'}
-                onClick={() => handleViewTypeChange('table')}
-                title="Table View"
-                className="border"
-              >
-                <FontAwesomeIcon icon={faList} className="text-secondary" />
-              </Button>
-              <Button 
-                variant={viewType === 'cards' ? 'light' : 'outline-light'}
-                onClick={() => handleViewTypeChange('cards')}
-                title="Card View"
-                className="border"
-              >
-                <FontAwesomeIcon icon={faTableCells} className="text-secondary" />
-              </Button>
-            </div>
           </div>
-          <Button 
-            variant="light" 
-            onClick={() => setShowAddModal(true)} 
-            style={{ whiteSpace: 'nowrap' }}
-            className="border"
-          >
-            <FontAwesomeIcon icon={faPlus} className="me-2 text-success" />
-            Add New Mini
-          </Button>
         </div>
 
         {/* Conditional rendering based on view type */}

@@ -3,6 +3,7 @@ import { Container, Card, Form, Button, Table, Alert, Row, Col } from 'react-boo
 import { faCode } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { api } from '../database/db'
+import PageHeader from '../components/PageHeader/PageHeader'
 
 const EXAMPLE_QUERIES = {
   'Show Tables': `SELECT name FROM sqlite_master WHERE type='table';`,
@@ -88,15 +89,12 @@ const ManualSQL = () => {
 
   return (
     <Container fluid className="content">
-      <Card className="mb-4">
-        <Card.Body className="d-flex align-items-center">
-          <FontAwesomeIcon icon={faCode} className="text-info me-2" />
-          <div>
-            <h4 className="mb-0">Manual SQL</h4>
-            <small className="text-muted">Execute custom SQL queries</small>
-          </div>
-        </Card.Body>
-      </Card>
+      <PageHeader
+        icon={faCode}
+        iconColor="text-warning"
+        title="Manual SQL"
+        subtitle="Execute custom SQL queries"
+      />
 
       <div className="bg-white p-4 rounded shadow-sm">
         <Row className="mb-3">
