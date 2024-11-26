@@ -201,10 +201,8 @@ const MiniOverviewEdit = ({ show, handleClose, categories, types, tags, productS
 
       const responseData = response.data
 
-      // Update minis state by replacing the edited mini
-      setMinis(prevMinis => prevMinis.map(m => 
-        m.id === mini.id ? responseData : m
-      ))
+      // Call setMinis with the updated mini
+      setMinis(responseData)  // This will now trigger the animation
       
       handleClose()
     } catch (err) {

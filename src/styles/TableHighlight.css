@@ -1,0 +1,50 @@
+@keyframes highlightOverlay {
+    0% {
+        transform: translateX(-100%);
+    }
+    100% {
+        transform: translateX(100%);
+    }
+}
+
+tr.highlight-update {
+    position: relative;
+    overflow: visible;
+}
+
+tr.highlight-update::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(
+        to right,
+        transparent 0%,
+        rgba(25, 135, 84, 0.3) 40%,
+        rgba(25, 135, 84, 0.3) 60%,
+        transparent 100%
+    );
+    animation: highlightOverlay 1s ease-in-out forwards;
+    pointer-events: none;
+    z-index: 1;
+    border: none;
+    overflow: hidden;
+}
+
+/* Dark theme version */
+.table-dark tr.highlight-update::after {
+    background: linear-gradient(
+        to right,
+        transparent 0%,
+        rgba(25, 135, 84, 0.3) 40%,
+        rgba(25, 135, 84, 0.3) 60%,
+        transparent 100%
+    );
+}
+
+/* Add this to prevent table scrollbar */
+.table-responsive {
+    overflow-x: hidden;
+}

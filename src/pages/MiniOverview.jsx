@@ -10,6 +10,7 @@ import ImageModal from '../components/ImageModal'
 import { useTheme } from '../context/ThemeContext'
 import TableButton from '../components/TableButton'
 import MiniViewer from '../components/MiniViewer/MiniViewer'
+import '../styles/TableHighlight.css'
 
 const styles = {
   fontSize: '0.75rem'  // Even smaller, equivalent to 12px
@@ -51,6 +52,9 @@ const MiniOverview = () => {
   // Add new state for MiniViewer
   const [showViewer, setShowViewer] = useState(false)
   const [selectedMini, setSelectedMini] = useState(null)
+
+  // Add new state for tracking recently updated mini
+  const [recentlyUpdatedMiniId, setRecentlyUpdatedMiniId] = useState(null)
 
   const processMinis = (minis) => {
     return minis.map(mini => ({
@@ -308,6 +312,19 @@ const MiniOverview = () => {
     setShowViewer(true)
   }
 
+  // Pass this function to MiniOverviewEdit
+  const handleMiniUpdate = (updatedMini) => {
+    setMinis(prevMinis => prevMinis.map(m => 
+      m.id === updatedMini.id ? updatedMini : m
+    ))
+    setRecentlyUpdatedMiniId(updatedMini.id)
+    
+    // Clear the highlight after 3 seconds
+    setTimeout(() => {
+      setRecentlyUpdatedMiniId(null)
+    }, 3000)
+  }
+
   if (error) return <div>Error: {error}</div>
 
   return (
@@ -401,7 +418,10 @@ const MiniOverview = () => {
               </thead>
               <tbody>
                 {currentMinis.map(mini => (
-                  <tr key={mini.id}>
+                  <tr 
+                    key={mini.id}
+                    className={mini.id === recentlyUpdatedMiniId ? 'highlight-update' : ''}
+                  >
                     <td className="text-center">
                       {mini.image_path && (
                         <img 
@@ -536,14 +556,14 @@ const MiniOverview = () => {
           show={showEditModal}
           handleClose={() => {
             setShowEditModal(false)
-            setEditingMini(null)  // Clear the editing mini when closing
+            setEditingMini(null)
           }}
           categories={categories}
           types={types}
           tags={tags}
           productSets={productSets}
-          mini={editingMini}  // Pass the mini being edited
-          setMinis={setMinis}
+          mini={editingMini}
+          setMinis={handleMiniUpdate}  // Replace setMinis with handleMiniUpdate
           minis={minis}
           baseSizes={baseSizes}
         />
