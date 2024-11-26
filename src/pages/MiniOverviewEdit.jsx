@@ -420,21 +420,43 @@ const MiniOverviewEdit = ({ show, handleClose, categories, types, tags, productS
                     <Col md={4}>
                       <Form.Group>
                         <Form.Label>Painted By</Form.Label>
-                        <div className="d-flex gap-3">
+                        <div className="d-flex gap-2">
                           {paintedByOptions.map(option => (
-                            <Form.Check
+                            <div
                               key={option.id}
-                              type="radio"
-                              id={`painted-by-${option.id}`}
-                              label={option.painted_by_name}
-                              name="paintedBy"
-                              value={option.id.toString()}
-                              checked={newMini.painted_by === option.id.toString()}
-                              onChange={(e) => setNewMini(prev => ({ 
-                                ...prev, 
-                                painted_by: e.target.value 
-                              }))}
-                            />
+                              onClick={() => setNewMini(prev => ({ ...prev, painted_by: option.id.toString() }))}
+                              className={`
+                                border rounded p-2 cursor-pointer
+                                ${newMini.painted_by === option.id.toString() ? 'bg-primary text-white' : 'bg-light'}
+                              `}
+                              style={{
+                                cursor: 'pointer',
+                                flex: 1,
+                                textAlign: 'center',
+                                transition: 'all 0.2s ease',
+                                boxShadow: newMini.painted_by === option.id.toString() ? '0 0 0 2px var(--bs-primary)' : 'none'
+                              }}
+                            >
+                              <input
+                                type="radio"
+                                id={`painted-by-${option.id}`}
+                                name="paintedBy"
+                                value={option.id.toString()}
+                                checked={newMini.painted_by === option.id.toString()}
+                                onChange={() => {}}
+                                style={{ display: 'none' }}
+                              />
+                              <label 
+                                htmlFor={`painted-by-${option.id}`}
+                                style={{ 
+                                  cursor: 'pointer',
+                                  margin: 0,
+                                  fontWeight: newMini.painted_by === option.id.toString() ? 'bold' : 'normal'
+                                }}
+                              >
+                                {option.painted_by_name}
+                              </label>
+                            </div>
                           ))}
                         </div>
                       </Form.Group>

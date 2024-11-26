@@ -15,7 +15,13 @@ const Pagination: React.FC<PaginationProps> = ({
   onPageChange,
   className = ''
 }) => {
-  if (totalPages <= 1) return null
+  if (totalPages <= 1) {
+    return (
+      <div className="text-muted text-center pb-3">
+        This table has just 1 page.
+      </div>
+    );
+  }
   
   return (
     <div className={`pagination-wrapper ${className}`}>
