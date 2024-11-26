@@ -1,0 +1,48 @@
+.pagination .page-link {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.875rem;
+  color: #6c757d;
+  background-color: transparent;
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
+  min-width: 32px;
+  text-align: center;
+}
+
+.pagination .page-link:hover {
+  color: #000;
+  background-color: rgba(0, 0, 0, 0.02);
+  border-color: #adb5bd;
+}
+
+.pagination .page-item.active .page-link {
+  color: #000;
+  background-color: rgba(0, 0, 0, 0.03);
+  border-color: #adb5bd;
+  font-weight: 600;
+}
+
+.pagination .page-item.disabled .page-link {
+  color: #adb5bd;
+  opacity: 0.5;
+  border-color: #dee2e6;
+}
+
+/* Dark mode support */
+[data-bs-theme="dark"] .pagination .page-link {
+  color: #adb5bd;
+  border-color: #454d55;
+  background-color: transparent;
+}
+
+[data-bs-theme="dark"] .pagination .page-link:hover {
+  color: #fff;
+  background-color: rgba(255, 255, 255, 0.075);
+  border-color: #6c757d;
+}
+
+[data-bs-theme="dark"] .pagination .page-item.active .page-link {
+  color: #fff;
+  background-color: rgba(255, 255, 255, 0.1);
+  border-color: #6c757d;
+} 

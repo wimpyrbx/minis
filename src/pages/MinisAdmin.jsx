@@ -7,6 +7,7 @@ import TableButton from '../components/TableButton'
 import CustomTable from '../components/Table/Table'
 import PageHeader from '../components/PageHeader/PageHeader'
 import AddButton from '../components/Buttons/AddButton'
+import PaginationControl from '../components/Pagination/Pagination'
 
 const MinisAdmin = () => {
   const [categories, setCategories] = useState([])
@@ -238,41 +239,6 @@ const MinisAdmin = () => {
     } catch (err) {
       console.error('Error saving entries per page setting:', err)
     }
-  }
-
-  // Add the PaginationControl component
-  const PaginationControl = ({ currentPage, totalPages, onPageChange }) => {
-    if (totalPages <= 1) return null;
-    
-    return (
-      <div className="pagination-wrapper">
-        <Pagination size="sm">
-          <Pagination.First 
-            onClick={() => onPageChange(1)} 
-            disabled={currentPage === 1}
-          />
-          <Pagination.Prev 
-            onClick={() => onPageChange(currentPage - 1)}
-            disabled={currentPage === 1}
-          />
-          {currentPage > 2 && <Pagination.Item onClick={() => onPageChange(1)}>1</Pagination.Item>}
-          {currentPage > 3 && <Pagination.Ellipsis />}
-          {currentPage > 1 && <Pagination.Item onClick={() => onPageChange(currentPage - 1)}>{currentPage - 1}</Pagination.Item>}
-          <Pagination.Item active>{currentPage}</Pagination.Item>
-          {currentPage < totalPages && <Pagination.Item onClick={() => onPageChange(currentPage + 1)}>{currentPage + 1}</Pagination.Item>}
-          {currentPage < totalPages - 2 && <Pagination.Ellipsis />}
-          {currentPage < totalPages - 1 && <Pagination.Item onClick={() => onPageChange(totalPages)}>{totalPages}</Pagination.Item>}
-          <Pagination.Next 
-            onClick={() => onPageChange(currentPage + 1)}
-            disabled={currentPage === totalPages}
-          />
-          <Pagination.Last 
-            onClick={() => onPageChange(totalPages)}
-            disabled={currentPage === totalPages}
-          />
-        </Pagination>
-      </div>
-    )
   }
 
   // Add filtered data getter for types

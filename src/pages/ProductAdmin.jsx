@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { Container, Row, Col, Form, Button, Alert, Card, Modal, Pagination } from 'react-bootstrap'
-import { faBoxes, faTrash, faIndustry, faBoxArchive, faPencil, faPlus } from '@fortawesome/free-solid-svg-icons'
+import { faBoxes, faTrash, faIndustry, faBoxArchive, faPencil, faPlus, faAngleDoubleLeft, faAngleLeft, faAngleRight, faAngleDoubleRight } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { api } from '../database/db'
 import TableButton from '../components/TableButton'
 import CustomTable from '../components/Table/Table'
 import PageHeader from '../components/PageHeader/PageHeader'
 import AddButton from '../components/Buttons/AddButton'
+import PaginationControl from '../components/Pagination/Pagination'
 
 const ProductAdmin = () => {
   const [manufacturers, setManufacturers] = useState([])
@@ -295,40 +296,6 @@ const ProductAdmin = () => {
     }
   }
 
-  const PaginationControl = ({ currentPage, totalPages, onPageChange }) => {
-    if (totalPages <= 1) return null;
-    
-    return (
-      <div className="pagination-wrapper">
-        <Pagination size="sm">
-          <Pagination.First 
-            onClick={() => onPageChange(1)} 
-            disabled={currentPage === 1}
-          />
-          <Pagination.Prev 
-            onClick={() => onPageChange(currentPage - 1)}
-            disabled={currentPage === 1}
-          />
-          {currentPage > 2 && <Pagination.Item onClick={() => onPageChange(1)}>1</Pagination.Item>}
-          {currentPage > 3 && <Pagination.Ellipsis />}
-          {currentPage > 1 && <Pagination.Item onClick={() => onPageChange(currentPage - 1)}>{currentPage - 1}</Pagination.Item>}
-          <Pagination.Item active>{currentPage}</Pagination.Item>
-          {currentPage < totalPages && <Pagination.Item onClick={() => onPageChange(currentPage + 1)}>{currentPage + 1}</Pagination.Item>}
-          {currentPage < totalPages - 2 && <Pagination.Ellipsis />}
-          {currentPage < totalPages - 1 && <Pagination.Item onClick={() => onPageChange(totalPages)}>{totalPages}</Pagination.Item>}
-          <Pagination.Next 
-            onClick={() => onPageChange(currentPage + 1)}
-            disabled={currentPage === totalPages}
-          />
-          <Pagination.Last 
-            onClick={() => onPageChange(totalPages)}
-            disabled={currentPage === totalPages}
-          />
-        </Pagination>
-      </div>
-    )
-  }
-
   return (
     <Container fluid className="content">
       <PageHeader
@@ -363,7 +330,7 @@ const ProductAdmin = () => {
 
       <Row>
         {/* Manufacturers Card */}
-        <Col md={2}>
+        <Col md={3}>
           <Card className="mb-4">
             <Card.Body className="pb-0 pt-2">
               <div className="d-flex justify-content-between align-items-center mb-2" style={{ minHeight: '32px' }}>
@@ -556,7 +523,7 @@ const ProductAdmin = () => {
         </Col>
 
         {/* Product Sets Card */}
-        <Col md={6}>
+        <Col md={5}>
           <Card className="mb-4">
             <Card.Body className="pb-0 pt-2">
               <div className="d-flex justify-content-between align-items-center mb-2" style={{ minHeight: '32px' }}>
