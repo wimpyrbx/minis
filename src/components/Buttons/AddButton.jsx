@@ -3,7 +3,13 @@ import { Button } from 'react-bootstrap'
 import { faPlus } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 
-const AddButton = ({ onClick, disabled, type = 'submit' }) => {
+const AddButton = ({ 
+  onClick, 
+  disabled, 
+  type = 'submit',
+  text = 'Add',  // Default text
+  className = ''
+}) => {
   return (
     <Button 
       type={type}
@@ -16,11 +22,12 @@ const AddButton = ({ onClick, disabled, type = 'submit' }) => {
         border: '1px solid #dee2e6',
         opacity: disabled ? 0.4 : 1
       }}
-      className="d-flex align-items-center"
+      className={`d-flex align-items-center ${className}`}
       disabled={disabled}
+      onClick={onClick}
     >
       <FontAwesomeIcon icon={faPlus} className="me-2 text-success" />
-      Add
+      {text}
     </Button>
   )
 }

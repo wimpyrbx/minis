@@ -47,4 +47,46 @@
 .pill_tag {
   background-color: #2255AA;  /* Bootstrap primary blue */
   color: #fff;
+}
+
+.cursor-pointer {
+  cursor: pointer;
+}
+
+.badge {
+  display: inline-block;
+  font-weight: 500;
+  line-height: 1;
+  text-align: center;
+  white-space: nowrap;
+  vertical-align: baseline;
+  border-radius: 0.25rem;
+}
+
+/* Dark mode adjustments */
+[data-bs-theme="dark"] .badge.bg-warning {
+  opacity: 0.9;
+}
+
+/* Expand variant specific styles */
+.badge.bg-primary.fw-bold {
+  opacity: 0.9;
+  transition: opacity 0.15s ease-in-out;
+}
+
+.badge.bg-primary.fw-bold:hover {
+  opacity: 1;
+}
+
+/* Add expand variant */
+.pill_expand {
+  background-color: #888888;  /* Bootstrap primary */
+  color: #fff;
+  font-weight: 700;
+  opacity: 0.9;
+  transition: opacity 0.15s ease-in-out;
+}
+
+.pill_expand:hover {
+  opacity: 1;
 } 

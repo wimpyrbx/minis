@@ -5,17 +5,30 @@ const Pill = ({
   text, 
   variant = 'primary',
   className = '',
-  onClick
+  onClick,
+  style
 }) => {
+  const getVariantClass = () => {
+    if (variant === 'expand') {
+      return 'pill_expand'
+    }
+    return `pill_${variant}`
+  }
+
   return (
     <span 
       className={`
         pill 
-        pill_${variant} 
+        ${getVariantClass()}
         ${onClick ? 'pill_clickable' : ''} 
         ${className}
       `}
       onClick={onClick}
+      style={{
+        fontSize: variant === 'expand' ? '0.65rem' : '0.75em',
+        padding: variant === 'expand' ? '0.25em 0.5em' : '0.35em 0.65em',
+        ...style
+      }}
     >
       {text}
     </span>
