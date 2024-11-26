@@ -30,10 +30,29 @@ const MinisAdmin = () => {
     { 
       key: 'name', 
       label: 'Name',
-      render: (row) => <span>{row.name}</span>
+      render: (row) => {
+        const typeCount = types.filter(type => type.category_id.toString() === row.id.toString()).length;
+        return (
+          <span 
+            className="cursor-pointer"
+            onClick={() => {
+              setNewType(prev => ({ ...prev, category_id: row.id.toString() }));
+              setSelectedCategoryForTypes(row.id.toString());
+              setTypesPage(1);
+            }}
+          >
+            {row.name}
+            {typeCount > 0 && (
+              <span className="text-muted ms-1">
+                ({typeCount})
+              </span>
+            )}
+          </span>
+        );
+      }
     },
-    {
-      key: 'count',
+    { 
+      key: 'count', 
       label: 'Count',
       className: 'actions-cell',
       style: { width: '1%', whiteSpace: 'nowrap' },
@@ -70,7 +89,6 @@ const MinisAdmin = () => {
 
   // Add these new states near the top with other state declarations
   const [entriesPerPage, setEntriesPerPage] = useState(10)
-  const [categoriesPage, setCategoriesPage] = useState(1)
   const [typesPage, setTypesPage] = useState(1)
 
   // Add new state for filtering
@@ -232,7 +250,6 @@ const MinisAdmin = () => {
   const handleEntriesPerPageChange = async (e) => {
     const value = e.target.value
     setEntriesPerPage(parseInt(value))
-    setCategoriesPage(1)
     setTypesPage(1)
     try {
       await api.put('/api/settings/minisadmin_entries_per_page', { value })
@@ -243,10 +260,10 @@ const MinisAdmin = () => {
 
   // Add filtered data getter for types
   const getFilteredTypes = () => {
-    if (!selectedCategoryForTypes) return types
+    if (!selectedCategoryForTypes) return types;
     return types.filter(type => 
       type.category_id.toString() === selectedCategoryForTypes
-    )
+    );
   }
 
   return (
@@ -321,13 +338,8 @@ const MinisAdmin = () => {
 
               <CustomTable
                 columns={columns}
-                data={getPaginatedData(categories, categoriesPage, entriesPerPage)}
+                data={categories}
                 renderCell={renderCell}
-              />
-              <PaginationControl
-                currentPage={categoriesPage}
-                totalPages={getTotalPages(categories.length, entriesPerPage)}
-                onPageChange={setCategoriesPage}
               />
             </Card.Body>
           </Card>
@@ -354,7 +366,11 @@ const MinisAdmin = () => {
                       />
                       <Form.Select
                         value={newType.category_id}
-                        onChange={(e) => setNewType({...newType, category_id: e.target.value})}
+                        onChange={(e) => {
+                          setNewType({...newType, category_id: e.target.value});
+                          setSelectedCategoryForTypes(e.target.value);
+                          setTypesPage(1);
+                        }}
                         required
                         style={{ paddingLeft: '35px' }}
                         className="placeholder-light"
@@ -392,68 +408,86 @@ const MinisAdmin = () => {
                 </Row>
               </Form>
 
-              <CustomTable
-                columns={[
-                  { 
-                    key: 'category', 
-                    label: 'Category', 
-                    className: 'dimmed-cell',
-                    style: { whiteSpace: 'nowrap' }
-                  },
-                  { key: 'name', label: 'Name' },
-                  { 
-                    key: 'count', 
-                    label: 'Count',
-                    className: 'actions-cell',
-                    render: (row) => row.type_count > 0 ? row.type_count : ''
-                  },
-                  { 
-                    key: 'proxy_count', 
-                    label: 'Proxy',
-                    className: 'actions-cell',
-                    render: (row) => row.proxy_count > 0 ? row.proxy_count : ''
-                  },
-                  { 
-                    key: 'actions', 
-                    label: '', 
-                    className: 'actions-cell',
-                    style: { width: '1%', whiteSpace: 'nowrap' }
-                  }
-                ]}
-                data={getPaginatedData(getFilteredTypes(), typesPage, entriesPerPage)}
-                renderCell={(row, column) => {
-                  if (column.render) {
-                    return column.render(row);
-                  }
-                  switch (column.key) {
-                    case 'category':
-                      return row.category_name;
-                    case 'name':
-                      return row.name;
-                    case 'actions':
-                      return (
-                        <>
-                          <TableButton
-                            type="edit"
-                            onClick={() => openTypeModal(row)}
-                            className="me-2"
-                          />
-                          <TableButton
-                            type="delete"
-                            onClick={() => handleDeleteType(row.id)}
-                          />
-                        </>
-                      );
-                    default:
-                      return row[column.key];
-                  }
-                }}
-              />
-              <PaginationControl
-                currentPage={typesPage}
-                totalPages={getTotalPages(getFilteredTypes().length, entriesPerPage)}
-                onPageChange={setTypesPage}
-              />
+              {getFilteredTypes().length > 0 ? (
+                <>
+                  <CustomTable
+                    columns={[
+                      { 
+                        key: 'category', 
+                        label: 'Category', 
+                        className: 'dimmed-cell',
+                        style: { whiteSpace: 'nowrap' },
+                        render: (row) => (
+                          <span 
+                            className="cursor-pointer" 
+                            onClick={() => {
+                              setSelectedCategoryForTypes(row.category_id.toString());
+                              setNewType(prev => ({ ...prev, category_id: row.category_id.toString() }));
+                              setTypesPage(1);
+                            }}
+                          >
+                            {row.category_name}
+                          </span>
+                        )
+                      },
+                      { 
+                        key: 'name', 
+                        label: 'Name',
+                        render: (row) => (
+                          <span 
+                            className="cursor-pointer" 
+                            onClick={() => setNewType(prev => ({ ...prev, name: row.name }))}
+                          >
+                            {row.name}
+                          </span>
+                        )
+                      },
+                      { 
+                        key: 'count', 
+                        label: 'Count',
+                        className: 'actions-cell',
+                        render: (row) => row.type_count > 0 ? row.type_count : ''
+                      },
+                      { 
+                        key: 'proxy_count', 
+                        label: 'Proxy',
+                        className: 'actions-cell',
+                        render: (row) => row.proxy_count > 0 ? row.proxy_count : ''
+                      },
+                      { 
+                        key: 'actions', 
+                        label: '', 
+                        className: 'actions-cell',
+                        style: { width: '1%', whiteSpace: 'nowrap' },
+                        render: (row) => (
+                          <>
+                            <TableButton
+                              type="edit"
+                              onClick={() => openTypeModal(row)}
+                              className="me-2"
+                            />
+                            <TableButton
+                              type="delete"
+                              onClick={() => handleDeleteType(row.id)}
+                            />
+                          </>
+                        )
+                      }
+                    ]}
+                    data={getPaginatedData(getFilteredTypes(), typesPage, entriesPerPage)}
+                    renderCell={renderCell}
+                  />
+                  <PaginationControl
+                    currentPage={typesPage}
+                    totalPages={getTotalPages(getFilteredTypes().length, entriesPerPage)}
+                    onPageChange={setTypesPage}
+                  />
+                </>
+              ) : (
+                <div className="text-center py-3 text-muted">
+                  No data available.
+                </div>
+              )}
             </Card.Body>
           </Card>
         </Col>
