@@ -14,7 +14,7 @@
 
 /* Custom variant styles */
 .pill_category {
-  background-color: #775533;  /* Bootstrap secondary */
+  background-color: #225522;  /* Bootstrap secondary */
   color: #eee;
 }
 
@@ -24,7 +24,7 @@
 }
 
 .pill_proxytype {
-  background-color: #884488;  /* Bootstrap warning */
+  background-color: #884422;  /* Bootstrap warning */
   color: #eee;
 }
 

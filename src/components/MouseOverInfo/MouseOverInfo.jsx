@@ -45,10 +45,10 @@ const MouseOverInfo = ({
           clearTimeout(timeoutRef.current)
         }
 
-        // Update position - offset upward from cursor
+        // Update position - offset to the left of cursor
         setPosition({ 
-          left: e.clientX,
-          top: e.clientY - 20  // Move up from cursor more
+          left: e.clientX - 15,  // Slight offset from cursor
+          top: e.clientY
         })
       }
     }
@@ -66,7 +66,7 @@ const MouseOverInfo = ({
     <Overlay
       show={show}
       target={target}
-      placement="top"
+      placement="left"
       containerPadding={20}
       popperConfig={{
         strategy: 'fixed',
@@ -98,7 +98,7 @@ const MouseOverInfo = ({
           position: 'fixed',
           left: `${position.left}px`,
           top: `${position.top}px`,
-          transform: 'translate(-50%, -100%)',
+          transform: 'translate(-100%, -50%)',
           width: contentWidth ? `${contentWidth}px` : 'auto',
           minWidth: '200px',
           maxWidth: '400px'
