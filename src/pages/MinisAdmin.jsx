@@ -318,13 +318,15 @@ const MinisAdmin = () => {
         {/* Categories Card */}
         <Col md={5}>
           <Card className="mb-4">
-            <Card.Body className="pb-0">
-              <div className="d-flex justify-content-between align-items-center mb-3">
+            <Card.Body className="pb-0 pt-2">
+              <div className="d-flex justify-content-between align-items-center mb-2" style={{ minHeight: '32px' }}>
                 <div className="d-flex align-items-center">
                   <FontAwesomeIcon icon={faLayerGroup} className="text-info me-2" />
                   <h5 className="mb-0">Categories</h5>
                 </div>
-                <Form onSubmit={handleAddCategory} className="d-flex gap-2">
+              </div>
+              <Form onSubmit={handleAddCategory} className="mb-3">
+                <Row className="g-2">
                   <Col>
                     <div className="position-relative">
                       <FontAwesomeIcon 
@@ -355,8 +357,8 @@ const MinisAdmin = () => {
                       Add
                     </Button>
                   </Col>
-                </Form>
-              </div>
+                </Row>
+              </Form>
 
               <CustomTable
                 columns={columns}
@@ -375,13 +377,15 @@ const MinisAdmin = () => {
         {/* Types Card */}
         <Col md={7}>
           <Card>
-            <Card.Body className="pb-0">
-              <div className="d-flex justify-content-between align-items-center mb-3">
+            <Card.Body className="pb-0 pt-2">
+              <div className="d-flex justify-content-between align-items-center mb-2" style={{ minHeight: '32px' }}>
                 <div className="d-flex align-items-center">
                   <FontAwesomeIcon icon={faCube} className="text-info me-2" />
                   <h5 className="mb-0">Types</h5>
                 </div>
-                <Form onSubmit={handleAddType} className="d-flex gap-2">
+              </div>
+              <Form onSubmit={handleAddType} className="mb-3">
+                <Row className="g-2">
                   <Col md={5}>
                     <div className="position-relative">
                       <FontAwesomeIcon 
@@ -391,10 +395,7 @@ const MinisAdmin = () => {
                       />
                       <Form.Select
                         value={newType.category_id}
-                        onChange={(e) => {
-                          setNewType({...newType, category_id: e.target.value})
-                          setSelectedCategoryForTypes(e.target.value) // Update filter when category is selected
-                        }}
+                        onChange={(e) => setNewType({...newType, category_id: e.target.value})}
                         required
                         style={{ paddingLeft: '35px' }}
                         className="placeholder-light"
@@ -416,7 +417,6 @@ const MinisAdmin = () => {
                         style={{ left: '10px', top: '50%', transform: 'translateY(-50%)' }}
                       />
                       <Form.Control
-                        ref={typeNameInputRef}
                         type="text"
                         value={newType.name}
                         onChange={(e) => setNewType({...newType, name: e.target.value})}
@@ -438,8 +438,8 @@ const MinisAdmin = () => {
                       Add
                     </Button>
                   </Col>
-                </Form>
-              </div>
+                </Row>
+              </Form>
 
               <CustomTable
                 columns={[

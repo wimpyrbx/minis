@@ -364,13 +364,15 @@ const ProductAdmin = () => {
         {/* Manufacturers Card */}
         <Col md={3}>
           <Card className="mb-4">
-            <Card.Body className="pb-0">
-              <div className="d-flex align-items-center justify-content-between mb-4">
+            <Card.Body className="pb-0 pt-2">
+              <div className="d-flex justify-content-between align-items-center mb-2" style={{ minHeight: '32px' }}>
                 <div className="d-flex align-items-center">
                   <FontAwesomeIcon icon={faIndustry} className="text-warning me-2" />
                   <h5 className="mb-0">Manufacturers</h5>
                 </div>
-                <Form onSubmit={handleAddManufacturer} className="d-flex gap-2">
+              </div>
+              <Form onSubmit={handleAddManufacturer} className="mb-3">
+                <Row className="g-2">
                   <Col>
                     <div className="position-relative">
                       <FontAwesomeIcon 
@@ -400,8 +402,8 @@ const ProductAdmin = () => {
                       Add
                     </Button>
                   </Col>
-                </Form>
-              </div>
+                </Row>
+              </Form>
 
               <CustomTable
                 columns={[
@@ -441,73 +443,73 @@ const ProductAdmin = () => {
         {/* Product Lines Card */}
         <Col md={4}>
           <Card className="mb-4">
-            <Card.Body className="pb-0">
-              <div className="d-flex align-items-center justify-content-between mb-4">
+            <Card.Body className="pb-0 pt-2">
+              <div className="d-flex justify-content-between align-items-center mb-2" style={{ minHeight: '32px' }}>
                 <div className="d-flex align-items-center">
                   <FontAwesomeIcon icon={faBoxes} className="text-warning me-2" />
                   <h5 className="mb-0">Product Lines</h5>
                 </div>
-                <Form onSubmit={handleAddProductLine} className="mb-3">
-                  <Row className="g-2">
-                    <Col>
-                      <div className="position-relative">
-                        <FontAwesomeIcon 
-                          icon={faIndustry} 
-                          className="position-absolute text-muted" 
-                          style={{ left: '10px', top: '50%', transform: 'translateY(-50%)' }}
-                        />
-                        <Form.Select
-                          ref={manufacturerSelectRef}  // Add ref to Product Lines manufacturer select
-                          value={newProductLine.company_id}
-                          onChange={(e) => {
-                            setNewProductLine({...newProductLine, company_id: e.target.value})
-                            setSelectedManufacturerForLines(e.target.value)
-                          }}
-                          required
-                          style={{ paddingLeft: '35px' }}
-                          className="placeholder-light"
-                        >
-                          <option value="">Manufacturer...</option>
-                          {manufacturers.map(manufacturer => (
-                            <option key={manufacturer.id} value={manufacturer.id}>
-                              {manufacturer.name}
-                            </option>
-                          ))}
-                        </Form.Select>
-                      </div>
-                    </Col>
-                    <Col>
-                      <div className="position-relative">
-                        <FontAwesomeIcon 
-                          icon={faBoxes} 
-                          className="position-absolute text-muted" 
-                          style={{ left: '10px', top: '50%', transform: 'translateY(-50%)' }}
-                        />
-                        <Form.Control
-                          type="text"
-                          value={newProductLine.name}
-                          onChange={(e) => setNewProductLine({...newProductLine, name: e.target.value})}
-                          placeholder="Name..."
-                          required
-                          style={{ paddingLeft: '35px' }}
-                          className="placeholder-light"
-                        />
-                      </div>
-                    </Col>
-                    <Col xs="auto">
-                      <Button 
-                        type="submit" 
-                        variant="light" 
-                        className="border"
-                        disabled={!isValidProductLine(newProductLine)}
-                      >
-                        <FontAwesomeIcon icon={faPlus} className="me-2 text-success" />
-                        Add
-                      </Button>
-                    </Col>
-                  </Row>
-                </Form>
               </div>
+              <Form onSubmit={handleAddProductLine} className="mb-3">
+                <Row className="g-2">
+                  <Col md={7}>
+                    <div className="position-relative">
+                      <FontAwesomeIcon 
+                        icon={faIndustry} 
+                        className="position-absolute text-muted" 
+                        style={{ left: '10px', top: '50%', transform: 'translateY(-50%)' }}
+                      />
+                      <Form.Select
+                        ref={manufacturerSelectRef}
+                        value={newProductLine.company_id}
+                        onChange={(e) => {
+                          setNewProductLine({...newProductLine, company_id: e.target.value})
+                          setSelectedManufacturerForLines(e.target.value)
+                        }}
+                        required
+                        style={{ paddingLeft: '35px' }}
+                        className="placeholder-light"
+                      >
+                        <option value="">Manufacturer...</option>
+                        {manufacturers.map(manufacturer => (
+                          <option key={manufacturer.id} value={manufacturer.id}>
+                            {manufacturer.name}
+                          </option>
+                        ))}
+                      </Form.Select>
+                    </div>
+                  </Col>
+                  <Col>
+                    <div className="position-relative">
+                      <FontAwesomeIcon 
+                        icon={faBoxes} 
+                        className="position-absolute text-muted" 
+                        style={{ left: '10px', top: '50%', transform: 'translateY(-50%)' }}
+                      />
+                      <Form.Control
+                        type="text"
+                        value={newProductLine.name}
+                        onChange={(e) => setNewProductLine({...newProductLine, name: e.target.value})}
+                        placeholder="Name..."
+                        required
+                        style={{ paddingLeft: '35px' }}
+                        className="placeholder-light"
+                      />
+                    </div>
+                  </Col>
+                  <Col xs="auto">
+                    <Button 
+                      type="submit" 
+                      variant="light" 
+                      className="border"
+                      disabled={!isValidProductLine(newProductLine)}
+                    >
+                      <FontAwesomeIcon icon={faPlus} className="me-2 text-success" />
+                      Add
+                    </Button>
+                  </Col>
+                </Row>
+              </Form>
 
               <CustomTable
                 columns={[
@@ -571,106 +573,105 @@ const ProductAdmin = () => {
         {/* Product Sets Card */}
         <Col md={5}>
           <Card className="mb-4">
-            <Card.Body className="pb-0">
-              <div className="d-flex align-items-center justify-content-between mb-4">
+            <Card.Body className="pb-0 pt-2">
+              <div className="d-flex justify-content-between align-items-center mb-2" style={{ minHeight: '32px' }}>
                 <div className="d-flex align-items-center">
                   <FontAwesomeIcon icon={faBoxArchive} className="text-warning me-2" />
                   <h5 className="mb-0">Product Sets</h5>
                 </div>
-                <Form onSubmit={handleAddProductSet} className="mb-3">
-                  <Row className="g-2">
-                    <Col>
-                      <div className="position-relative">
-                        <FontAwesomeIcon 
-                          icon={faIndustry} 
-                          className="position-absolute text-muted" 
-                          style={{ left: '10px', top: '50%', transform: 'translateY(-50%)' }}
-                        />
-                        <Form.Select
-                          ref={manufacturerSelectForSetsRef}
-                          value={selectedManufacturerForSets}
-                          onChange={(e) => {
-                            setSelectedManufacturerForSets(e.target.value)
-                            // Clear both product line and name when manufacturer changes
+              </div>
+              <Form onSubmit={handleAddProductSet} className="mb-3">
+                <Row className="g-2">
+                  <Col md={5}>
+                    <div className="position-relative">
+                      <FontAwesomeIcon 
+                        icon={faIndustry} 
+                        className="position-absolute text-muted" 
+                        style={{ left: '10px', top: '50%', transform: 'translateY(-50%)' }}
+                      />
+                      <Form.Select
+                        ref={manufacturerSelectForSetsRef}
+                        value={selectedManufacturerForSets}
+                        onChange={(e) => {
+                          setSelectedManufacturerForSets(e.target.value)
+                          setNewProductSet({ name: '', product_line_id: '' })
+                        }}
+                        required
+                        style={{ paddingLeft: '35px' }}
+                        className="placeholder-light"
+                      >
+                        <option value="">Manufacturer...</option>
+                        {manufacturers.map(manufacturer => (
+                          <option key={manufacturer.id} value={manufacturer.id}>
+                            {manufacturer.name}
+                          </option>
+                        ))}
+                      </Form.Select>
+                    </div>
+                  </Col>
+                  <Col md={4}>
+                    <div className="position-relative">
+                      <FontAwesomeIcon 
+                        icon={faBoxes} 
+                        className="position-absolute text-muted" 
+                        style={{ left: '10px', top: '50%', transform: 'translateY(-50%)' }}
+                      />
+                      <Form.Select
+                        value={newProductSet.product_line_id}
+                        onChange={(e) => {
+                          if (!e.target.value) {
                             setNewProductSet({ name: '', product_line_id: '' })
-                          }}
-                          required
-                          style={{ paddingLeft: '35px' }}
-                          className="placeholder-light"
-                        >
-                          <option value="">Manufacturer...</option>
-                          {manufacturers.map(manufacturer => (
-                            <option key={manufacturer.id} value={manufacturer.id}>
-                              {manufacturer.name}
+                          } else {
+                            setNewProductSet({...newProductSet, product_line_id: e.target.value})
+                          }
+                        }}
+                        required
+                        disabled={!selectedManufacturerForSets}
+                        style={{ paddingLeft: '35px' }}
+                        className="placeholder-light"
+                      >
+                        <option value="">Product Line...</option>
+                        {productLines
+                          .filter(line => line.company_id.toString() === selectedManufacturerForSets)
+                          .map(line => (
+                            <option key={line.id} value={line.id}>
+                              {line.name}
                             </option>
                           ))}
-                        </Form.Select>
-                      </div>
-                    </Col>
-                    <Col>
-                      <div className="position-relative">
-                        <FontAwesomeIcon 
-                          icon={faBoxes} 
-                          className="position-absolute text-muted" 
-                          style={{ left: '10px', top: '50%', transform: 'translateY(-50%)' }}
-                        />
-                        <Form.Select
-                          value={newProductSet.product_line_id}
-                          onChange={(e) => {
-                            if (!e.target.value) {
-                              setNewProductSet({ name: '', product_line_id: '' })
-                            } else {
-                              setNewProductSet({...newProductSet, product_line_id: e.target.value})
-                            }
-                          }}
-                          required
-                          disabled={!selectedManufacturerForSets}
-                          style={{ paddingLeft: '35px' }}
-                          className="placeholder-light"
-                        >
-                          <option value="">Product Line...</option>
-                          {productLines
-                            .filter(line => line.company_id.toString() === selectedManufacturerForSets)
-                            .map(line => (
-                              <option key={line.id} value={line.id}>
-                                {line.name}
-                              </option>
-                            ))}
-                        </Form.Select>
-                      </div>
-                    </Col>
-                    <Col>
-                      <div className="position-relative">
-                        <FontAwesomeIcon 
-                          icon={faBoxArchive} 
-                          className="position-absolute text-muted" 
-                          style={{ left: '10px', top: '50%', transform: 'translateY(-50%)' }}
-                        />
-                        <Form.Control
-                          type="text"
-                          value={newProductSet.name}
-                          onChange={(e) => setNewProductSet({...newProductSet, name: e.target.value})}
-                          placeholder="Name..."
-                          required
-                          style={{ paddingLeft: '35px' }}
-                          className="placeholder-light"
-                        />
-                      </div>
-                    </Col>
-                    <Col xs="auto">
-                      <Button 
-                        type="submit" 
-                        variant="light" 
-                        className="border"
-                        disabled={!isValidProductSet(newProductSet)}
-                      >
-                        <FontAwesomeIcon icon={faPlus} className="me-2 text-success" />
-                        Add
-                      </Button>
-                    </Col>
-                  </Row>
-                </Form>
-              </div>
+                      </Form.Select>
+                    </div>
+                  </Col>
+                  <Col>
+                    <div className="position-relative">
+                      <FontAwesomeIcon 
+                        icon={faBoxArchive} 
+                        className="position-absolute text-muted" 
+                        style={{ left: '10px', top: '50%', transform: 'translateY(-50%)' }}
+                      />
+                      <Form.Control
+                        type="text"
+                        value={newProductSet.name}
+                        onChange={(e) => setNewProductSet({...newProductSet, name: e.target.value})}
+                        placeholder="Name..."
+                        required
+                        style={{ paddingLeft: '35px' }}
+                        className="placeholder-light"
+                      />
+                    </div>
+                  </Col>
+                  <Col xs="auto">
+                    <Button 
+                      type="submit" 
+                      variant="light" 
+                      className="border"
+                      disabled={!isValidProductSet(newProductSet)}
+                    >
+                      <FontAwesomeIcon icon={faPlus} className="me-2 text-success" />
+                      Add
+                    </Button>
+                  </Col>
+                </Row>
+              </Form>
 
               <CustomTable
                 columns={[
