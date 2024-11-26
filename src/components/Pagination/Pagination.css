@@ -45,4 +45,18 @@
   color: #fff;
   background-color: rgba(255, 255, 255, 0.1);
   border-color: #6c757d;
+}
+
+.pagination .page-item .page-link:focus {
+  box-shadow: none;
+  outline: none;
+}
+
+.pagination .page-item .page-link {
+  border-radius: 0;
+  margin: 0 1px;
+}
+
+.pagination .page-item.active .page-link {
+  box-shadow: none;
 } 

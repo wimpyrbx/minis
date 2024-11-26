@@ -91,4 +91,19 @@ router.delete('/:id', async (req, res) => {
   }
 })
 
+router.get('/:id/usage', async (req, res) => {
+  try {
+    const minis = await req.db.all(`
+      SELECT m.name as mini_name
+      FROM minis m
+      JOIN mini_to_categories mtc ON m.id = mtc.mini_id
+      WHERE mtc.category_id = ?
+      ORDER BY m.name
+    `, req.params.id);
+    res.json(minis);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router 

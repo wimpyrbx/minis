@@ -8,6 +8,7 @@ import CustomTable from '../components/Table/Table'
 import PageHeader from '../components/PageHeader/PageHeader'
 import AddButton from '../components/Buttons/AddButton'
 import PaginationControl from '../components/Pagination/Pagination'
+import UsageDetailsModal from '../components/UsageDetailsModal'
 
 const MinisAdmin = () => {
   const [categories, setCategories] = useState([])
@@ -56,7 +57,14 @@ const MinisAdmin = () => {
       label: 'Count',
       className: 'actions-cell',
       style: { width: '1%', whiteSpace: 'nowrap' },
-      render: (row) => row.mini_count > 0 ? row.mini_count : ''
+      render: (row) => (
+        <div 
+          className={row.mini_count > 0 ? "cursor-pointer w-100 h-100" : ""}
+          onClick={() => row.mini_count > 0 && fetchUsageDetails(row.id, 'category')}
+        >
+          {row.mini_count > 0 ? row.mini_count : ''}
+        </div>
+      )
     },
     { 
       key: 'actions', 
@@ -93,6 +101,21 @@ const MinisAdmin = () => {
 
   // Add new state for filtering
   const [selectedCategoryForTypes, setSelectedCategoryForTypes] = useState('')
+
+  // Add new state for usage details modal
+  const [showUsageModal, setShowUsageModal] = useState(false);
+  const [usageDetails, setUsageDetails] = useState({
+    title: '',
+    count: 0,
+    items: [],
+    type: ''
+  });
+
+  // Add categoriesPage state
+  const [categoriesPage, setCategoriesPage] = useState(1);
+
+  // Add new state for name filtering
+  const [typeNameFilter, setTypeNameFilter] = useState('');
 
   useEffect(() => {
     fetchData()
@@ -251,6 +274,7 @@ const MinisAdmin = () => {
     const value = e.target.value
     setEntriesPerPage(parseInt(value))
     setTypesPage(1)
+    setCategoriesPage(1)
     try {
       await api.put('/api/settings/minisadmin_entries_per_page', { value })
     } catch (err) {
@@ -260,11 +284,44 @@ const MinisAdmin = () => {
 
   // Add filtered data getter for types
   const getFilteredTypes = () => {
-    if (!selectedCategoryForTypes) return types;
-    return types.filter(type => 
-      type.category_id.toString() === selectedCategoryForTypes
-    );
-  }
+    return types.filter(type => {
+      const matchesCategory = !selectedCategoryForTypes || 
+        type.category_id.toString() === selectedCategoryForTypes;
+      const matchesName = !typeNameFilter || 
+        type.name.toLowerCase().includes(typeNameFilter.toLowerCase());
+      return matchesCategory && matchesName;
+    });
+  };
+
+  // Add function to fetch usage details
+  const fetchUsageDetails = async (id, type) => {
+    try {
+      let endpoint;
+      let title;
+      
+      if (type === 'category') {
+        endpoint = `/api/categories/${id}/usage`;
+        title = categories.find(c => c.id.toString() === id.toString())?.name;
+      } else if (type === 'type') {
+        endpoint = `/api/types/${id}/usage`;
+        title = types.find(t => t.id.toString() === id.toString())?.name;
+      } else if (type === 'proxy') {
+        endpoint = `/api/types/${id}/proxy-usage`;
+        title = types.find(t => t.id.toString() === id.toString())?.name;
+      }
+
+      const response = await api.get(endpoint);
+      setUsageDetails({
+        title,
+        count: response.data.length,
+        items: response.data,
+        type
+      });
+      setShowUsageModal(true);
+    } catch (err) {
+      setError(err.message);
+    }
+  };
 
   return (
     <Container fluid className="content">
@@ -338,8 +395,13 @@ const MinisAdmin = () => {
 
               <CustomTable
                 columns={columns}
-                data={categories}
+                data={getPaginatedData(categories, categoriesPage, entriesPerPage)}
                 renderCell={renderCell}
+              />
+              <PaginationControl
+                currentPage={categoriesPage}
+                totalPages={getTotalPages(categories.length, entriesPerPage)}
+                onPageChange={setCategoriesPage}
               />
             </Card.Body>
           </Card>
@@ -394,7 +456,11 @@ const MinisAdmin = () => {
                       <Form.Control
                         type="text"
                         value={newType.name}
-                        onChange={(e) => setNewType({...newType, name: e.target.value})}
+                        onChange={(e) => {
+                          setNewType({...newType, name: e.target.value});
+                          setTypeNameFilter(e.target.value);
+                          setTypesPage(1);
+                        }}
                         placeholder="Name..."
                         required
                         style={{ paddingLeft: '35px' }}
@@ -444,15 +510,29 @@ const MinisAdmin = () => {
                       },
                       { 
                         key: 'count', 
-                        label: 'Count',
+                        label: 'In Use (Type)',
                         className: 'actions-cell',
-                        render: (row) => row.type_count > 0 ? row.type_count : ''
+                        render: (row) => (
+                          <div 
+                            className={row.type_count > 0 ? "cursor-pointer w-100 h-100" : ""}
+                            onClick={() => row.type_count > 0 && fetchUsageDetails(row.id, 'type')}
+                          >
+                            {row.type_count > 0 ? row.type_count : ''}
+                          </div>
+                        )
                       },
                       { 
                         key: 'proxy_count', 
-                        label: 'Proxy',
+                        label: 'In Use (Proxy)',
                         className: 'actions-cell',
-                        render: (row) => row.proxy_count > 0 ? row.proxy_count : ''
+                        render: (row) => (
+                          <div 
+                            className={row.proxy_count > 0 ? "cursor-pointer w-100 h-100" : ""}
+                            onClick={() => row.proxy_count > 0 && fetchUsageDetails(row.id, 'proxy')}
+                          >
+                            {row.proxy_count > 0 ? row.proxy_count : ''}
+                          </div>
+                        )
                       },
                       { 
                         key: 'actions', 
@@ -572,6 +652,16 @@ const MinisAdmin = () => {
           </Button>
         </Modal.Footer>
       </Modal>
+
+      {/* Usage Details Modal */}
+      <UsageDetailsModal
+        show={showUsageModal}
+        onHide={() => setShowUsageModal(false)}
+        title={usageDetails.title}
+        count={usageDetails.count}
+        items={usageDetails.items}
+        type={usageDetails.type}
+      />
     </Container>
   )
 }

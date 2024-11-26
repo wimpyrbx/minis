@@ -214,26 +214,10 @@ const ProductAdmin = () => {
   ];
 
   const renderCell = (row, column) => {
-    switch (column.key) {
-      case 'name':
-        return row.name;
-      case 'actions':
-        return (
-          <>
-            <TableButton
-              type="edit"
-              onClick={() => openManufacturerModal(row)}
-              className="me-2"
-            />
-            <TableButton
-              type="delete"
-              onClick={() => handleDeleteManufacturer(row.id)}
-            />
-          </>
-        );
-      default:
-        return row[column.key];
+    if (column.render) {
+      return column.render(row);
     }
+    return row[column.key];
   };
 
   const openProductSetModal = (set) => {
@@ -296,6 +280,34 @@ const ProductAdmin = () => {
     }
   }
 
+  // Add reset function
+  const handleReset = () => {
+    // Reset all form inputs
+    setNewManufacturer({ name: '' });
+    setNewProductLine({ name: '', company_id: '' });
+    setNewProductSet({ name: '', product_line_id: '' });
+    
+    // Reset filters/selections
+    setSelectedManufacturerForLines('');
+    setSelectedManufacturerForSets('');
+    
+    // Reset pages
+    setManufacturersPage(1);
+    setProductLinesPage(1);
+    setProductSetsPage(1);
+  };
+
+  // Add function to check if there's anything to reset
+  const hasValuesToReset = () => {
+    return newManufacturer.name !== '' ||
+           newProductLine.name !== '' ||
+           newProductLine.company_id !== '' ||
+           newProductSet.name !== '' ||
+           newProductSet.product_line_id !== '' ||
+           selectedManufacturerForLines !== '' ||
+           selectedManufacturerForSets !== '';
+  };
+
   return (
     <Container fluid className="content">
       <PageHeader
@@ -304,29 +316,32 @@ const ProductAdmin = () => {
         title="Product Admin"
         subtitle="Manage manufacturers, product lines and sets"
       >
-        <div className="d-flex align-items-center justify-content-end">
-          <span className="text-muted me-2" style={{ fontSize: '0.875rem' }}>Show</span>
-          <Form.Select 
+        {hasValuesToReset() && (
+          <Button 
+            variant="warning" 
             size="sm" 
-            value={entriesPerPage} 
-            onChange={handleEntriesPerPageChange}
-            style={{ 
-              width: '60px',
-              fontSize: '0.875rem',
-              padding: '0.25rem 0.5rem',
-              height: 'auto'
-            }}
-            className="mx-2"
+            onClick={handleReset}
           >
-            <option value="10">10</option>
-            <option value="25">25</option>
-            <option value="50">50</option>
-          </Form.Select>
-          <span className="text-muted" style={{ fontSize: '0.875rem' }}>entries</span>
-        </div>
+            Reset
+          </Button>
+        )}
       </PageHeader>
 
       {error && <Alert variant="danger" className="mb-4">{error}</Alert>}
+
+      <div className="d-flex align-items-center mb-3 justify-content-end">
+        <span className="me-2">Show Entries:</span>
+        <Form.Select 
+          size="sm" 
+          value={entriesPerPage} 
+          onChange={handleEntriesPerPageChange}
+          style={{ width: '70px' }}
+        >
+          <option value="10">10</option>
+          <option value="25">25</option>
+          <option value="50">50</option>
+        </Form.Select>
+      </div>
 
       <Row>
         {/* Manufacturers Card */}
@@ -367,7 +382,24 @@ const ProductAdmin = () => {
 
               <CustomTable
                 columns={[
-                  { key: 'name', label: 'Name' },
+                  { 
+                    key: 'name', 
+                    label: 'Name',
+                    render: (row) => (
+                      <span 
+                        className="cursor-pointer"
+                        onClick={() => {
+                          setNewProductLine(prev => ({ ...prev, company_id: row.id.toString() }));
+                          setSelectedManufacturerForLines(row.id.toString());
+                          
+                          setSelectedManufacturerForSets(row.id.toString());
+                          setNewProductSet(prev => ({ ...prev, product_line_id: '' }));
+                        }}
+                      >
+                        {row.name}
+                      </span>
+                    )
+                  },
                   { 
                     key: 'actions', 
                     label: '', 
@@ -465,8 +497,43 @@ const ProductAdmin = () => {
 
               <CustomTable
                 columns={[
-                  { key: 'manufacturer_name', label: 'Manufacturer', className: 'dimmed-cell' },
-                  { key: 'name', label: 'Name' },
+                  { 
+                    key: 'manufacturer_name', 
+                    label: 'Manufacturer', 
+                    className: 'dimmed-cell',
+                    render: (row) => (
+                      <span 
+                        className="cursor-pointer"
+                        onClick={() => {
+                          setSelectedManufacturerForLines(row.company_id.toString());
+                          setNewProductLine(prev => ({ ...prev, company_id: row.company_id.toString() }));
+                          
+                          setSelectedManufacturerForSets(row.company_id.toString());
+                          setNewProductSet(prev => ({ ...prev, product_line_id: '' }));
+                        }}
+                      >
+                        {row.manufacturer_name}
+                      </span>
+                    )
+                  },
+                  { 
+                    key: 'name', 
+                    label: 'Name',
+                    render: (row) => (
+                      <span 
+                        className="cursor-pointer"
+                        onClick={() => {
+                          setSelectedManufacturerForSets(row.company_id.toString());
+                          setNewProductSet(prev => ({ 
+                            ...prev, 
+                            product_line_id: row.id.toString() 
+                          }));
+                        }}
+                      >
+                        {row.name}
+                      </span>
+                    )
+                  },
                   { 
                     key: 'actions', 
                     label: '', 
@@ -488,30 +555,7 @@ const ProductAdmin = () => {
                   }
                 ]}
                 data={getPaginatedData(getFilteredProductLines(), productLinesPage, entriesPerPage)}
-                renderCell={(row, column) => {
-                  switch (column.key) {
-                    case 'name':
-                      return row.name;
-                    case 'manufacturer_name':
-                      return row.manufacturer_name;
-                    case 'actions':
-                      return (
-                        <>
-                          <TableButton
-                            type="edit"
-                            onClick={() => openProductLineModal(row)}
-                            className="me-2"
-                          />
-                          <TableButton
-                            type="delete"
-                            onClick={() => handleDeleteProductLine(row.id)}
-                          />
-                        </>
-                      );
-                    default:
-                      return row[column.key];
-                  }
-                }}
+                renderCell={renderCell}
               />
               <PaginationControl
                 currentPage={productLinesPage}

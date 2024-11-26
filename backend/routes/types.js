@@ -88,4 +88,34 @@ router.delete('/:id', async (req, res) => {
   }
 })
 
+router.get('/:id/usage', async (req, res) => {
+  try {
+    const minis = await req.db.all(`
+      SELECT m.name as mini_name
+      FROM minis m
+      JOIN mini_to_types mtt ON m.id = mtt.mini_id
+      WHERE mtt.type_id = ?
+      ORDER BY m.name
+    `, req.params.id);
+    res.json(minis);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.get('/:id/proxy-usage', async (req, res) => {
+  try {
+    const minis = await req.db.all(`
+      SELECT m.name as mini_name
+      FROM minis m
+      JOIN mini_to_proxy_types mtpt ON m.id = mtpt.mini_id
+      WHERE mtpt.type_id = ?
+      ORDER BY m.name
+    `, req.params.id);
+    res.json(minis);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router
