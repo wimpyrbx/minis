@@ -41,15 +41,14 @@ const MouseOverInfo = ({
   useEffect(() => {
     const handleMouseMove = (e) => {
       if (show) {
-        // Clear any existing timeout
         if (timeoutRef.current) {
           clearTimeout(timeoutRef.current)
         }
 
-        // Update position immediately
+        // Update position - offset upward from cursor
         setPosition({ 
-          left: e.clientX - 10,
-          top: e.clientY - 10
+          left: e.clientX,
+          top: e.clientY - 20  // Move up from cursor more
         })
       }
     }
@@ -67,7 +66,7 @@ const MouseOverInfo = ({
     <Overlay
       show={show}
       target={target}
-      placement="left"
+      placement="top"
       containerPadding={20}
       popperConfig={{
         strategy: 'fixed',
@@ -75,7 +74,7 @@ const MouseOverInfo = ({
           {
             name: 'offset',
             options: {
-              offset: [-10, 0],
+              offset: [0, -10],
             },
           },
           {
@@ -91,7 +90,6 @@ const MouseOverInfo = ({
         ref={contentRef}
         onMouseEnter={onMouseEnter}
         onMouseLeave={(e) => {
-          // Add small delay before triggering mouseleave
           timeoutRef.current = setTimeout(() => {
             onMouseLeave(e)
           }, 50)
@@ -100,7 +98,7 @@ const MouseOverInfo = ({
           position: 'fixed',
           left: `${position.left}px`,
           top: `${position.top}px`,
-          transform: 'translate(-100%, -50%)',
+          transform: 'translate(-50%, -100%)',
           width: contentWidth ? `${contentWidth}px` : 'auto',
           minWidth: '200px',
           maxWidth: '400px'

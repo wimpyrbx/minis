@@ -14,6 +14,7 @@ import '../styles/TableHighlight.css'
 import PageHeader from '../components/PageHeader/PageHeader'
 import * as bootstrap from 'bootstrap'
 import MouseOverInfo from '../components/MouseOverInfo/MouseOverInfo'
+import Pill from '../components/Pill/Pill'
 
 const styles = {
   fontSize: '0.75rem'  // Even smaller, equivalent to 12px
@@ -448,7 +449,11 @@ const MiniOverview = () => {
                           {mini.category_ids?.map((id) => {
                             const category = categories.find(c => c.id.toString() === id)
                             return category ? (
-                              <span key={id} className="badge bg-secondary me-1 mb-1">{category.name}</span>
+                              <Pill
+                                key={id}
+                                text={category.name}
+                                variant="category"
+                              />
                             ) : null
                           })}
                         </td>
@@ -459,16 +464,23 @@ const MiniOverview = () => {
                           {mini.type_ids?.map((id) => {
                             const type = types.find(t => t.id.toString() === id)
                             return type ? (
-                              <span key={id} className="badge bg-info me-1 mb-1">{type.name}</span>
+                              <Pill
+                                key={id}
+                                text={type.name}
+                                variant="type"
+                              />
                             ) : null
                           })}
-                          {/* Proxy Types - shown after regular types */}
+                          {/* Proxy Types */}
                           {mini.proxy_type_ids?.map((id) => {
                             const proxyType = types.find(t => t.id.toString() === id)
                             return proxyType ? (
-                              <span key={id} className="badge bg-warning text-dark me-1 mb-1">
-                                {proxyType.name}
-                              </span>
+                              <Pill
+                                key={id}
+                                text={proxyType.name}
+                                variant="proxytype"
+                                isDark={true}
+                              />
                             ) : null
                           })}
                         </td>
@@ -512,12 +524,16 @@ const MiniOverview = () => {
                           )}
                         </td>
 
-                        {/* Tags Column (formerly part of Details) */}
+                        {/* Tags Column */}
                         <td className="align-middle">
                           {mini.tag_ids?.map((id) => {
                             const tag = tags.find(t => t.id.toString() === id)
                             return tag ? (
-                              <span key={id} className="badge bg-primary me-1">{tag.name}</span>
+                              <Pill
+                                key={id}
+                                text={tag.name}
+                                variant="tag"
+                              />
                             ) : null
                           })}
                         </td>
