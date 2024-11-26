@@ -445,7 +445,7 @@ const ProductAdmin = () => {
               </div>
               <Form onSubmit={handleAddProductLine} className="mb-3">
                 <Row className="g-2">
-                  <Col md={7}>
+                  <Col md={6}>
                     <div className="position-relative">
                       <FontAwesomeIcon 
                         icon={faIndustry} 
@@ -567,7 +567,7 @@ const ProductAdmin = () => {
               </div>
               <Form onSubmit={handleAddProductSet} className="mb-3">
                 <Row className="g-2">
-                  <Col md={5}>
+                  <Col md={4}>
                     <div className="position-relative">
                       <FontAwesomeIcon 
                         icon={faIndustry} 

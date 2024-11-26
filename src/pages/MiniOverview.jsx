@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
-import { Container, Card, Button, Table, Row, Col, Form, Pagination } from 'react-bootstrap'
-import { faPhotoFilm, faPlus, faList, faTableCells, faImage, faPencil, faTrash } from '@fortawesome/free-solid-svg-icons'
+import { Container, Card, Button, Table, Row, Col, Form, Pagination, Alert } from 'react-bootstrap'
+import { faPhotoFilm, faPlus, faList, faTableCells, faImage, faPencil, faTrash, faCubesStacked } from '@fortawesome/free-solid-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { api } from '../database/db'
 import MiniOverviewAdd from './MiniOverviewAdd'
@@ -12,10 +12,32 @@ import TableButton from '../components/TableButton'
 import MiniViewer from '../components/MiniViewer/MiniViewer'
 import '../styles/TableHighlight.css'
 import PageHeader from '../components/PageHeader/PageHeader'
+import * as bootstrap from 'bootstrap'
+import MouseOverInfo from '../components/MouseOverInfo/MouseOverInfo'
 
 const styles = {
   fontSize: '0.75rem'  // Even smaller, equivalent to 12px
 }
+
+const tooltipStyles = `
+  .tooltip-inner {
+    text-align: left !important;
+    font-family: monospace;
+  }
+`
+
+const tableStyles = `
+  .custom-table tbody tr,
+  .custom-table tbody tr td {
+    cursor: default;
+  }
+  
+  .custom-table .text-success,
+  .custom-table img,
+  .custom-table .table-button {
+    cursor: pointer;
+  }
+`
 
 const MiniOverview = () => {
   const { darkMode } = useTheme()
@@ -57,21 +79,14 @@ const MiniOverview = () => {
   // Add new state for tracking recently updated mini
   const [recentlyUpdatedMiniId, setRecentlyUpdatedMiniId] = useState(null)
 
-  const processMinis = (minis) => {
-    return minis.map(mini => ({
-      ...mini,
-      painted_by: {
-        id: mini.painted_by_id,
-        name: mini.painted_by_name
-      },
-      // Other processing logic...
-    }))
-  }
+  // Add this state for managing popover visibility
+  const [showProductSetInfo, setShowProductSetInfo] = useState(null) // Will store mini.id when showing
 
-  // First useEffect to fetch data
+  // Fetch data once
   useEffect(() => {
     const fetchData = async () => {
       try {
+        console.log('Fetching data...')
         const [categoriesRes, typesRes, tagsRes, productSetsRes, minisRes, baseSizesRes, settingsRes] = await Promise.all([
           api.get('/api/categories'),
           api.get('/api/types'),
@@ -82,11 +97,41 @@ const MiniOverview = () => {
           api.get('/api/settings')
         ])
 
+        const splitAndTrim = (str) => str ? str.split(',').map(n => n.trim()) : []
+
+        const processedMinis = minisRes.data.map(mini => ({
+          ...mini,
+          image_path: mini.image_path ? `${mini.image_path}?t=${Date.now()}` : null,
+          original_image_path: mini.original_image_path ? `${mini.original_image_path}?t=${Date.now()}` : null,
+          category_ids: mini.category_names ? 
+            categoriesRes.data.filter(cat => 
+              splitAndTrim(mini.category_names).includes(cat.name)
+            ).map(cat => cat.id.toString()) : [],
+          type_ids: mini.type_names ? 
+            typesRes.data.filter(type => 
+              splitAndTrim(mini.type_names).includes(type.name)
+            ).map(type => type.id.toString()) : [],
+          proxy_type_ids: mini.proxy_type_names ? 
+            typesRes.data.filter(type => 
+              splitAndTrim(mini.proxy_type_names).includes(type.name)
+            ).map(type => type.id.toString()) : [],
+          tag_ids: mini.tag_names ? 
+            tagsRes.data.filter(tag => 
+              splitAndTrim(mini.tag_names).includes(tag.name)
+            ).map(tag => tag.id.toString()) : [],
+          product_set_ids: mini.product_set_names ? 
+            productSetsRes.data.filter(set => {
+              const fullSetName = `${set.name} (${set.product_line_name} by ${set.manufacturer_name})`
+              return splitAndTrim(mini.product_set_names).includes(fullSetName)
+            }).map(set => set.id.toString()) : []
+        }))
+
+        console.log('Setting processed minis:', processedMinis)
+        setMinis(processedMinis)
         setCategories(categoriesRes.data)
         setTypes(typesRes.data)
         setTags(tagsRes.data)
         setProductSets(productSetsRes.data)
-        setMinis(minisRes.data)
         setBaseSizes(baseSizesRes.data)
 
         if (settingsRes.data.collection_viewtype) {
@@ -107,75 +152,51 @@ const MiniOverview = () => {
     fetchData()
   }, [])
 
-  // Separate useEffect to map IDs - modified to prevent infinite loop
-  useEffect(() => {
-    if (categories.length && types.length && tags.length && productSets.length) {
-      const splitAndTrim = (str) => str ? str.split(',').map(n => n.trim()) : []
-      
-      setMinis(prevMinis => {
-        // Only update if we have minis to process
-        if (!prevMinis.length) return prevMinis
+  // Filter minis
+  const filterMinis = (minisToFilter) => {
+    if (!minisToFilter) return []
+    if (!searchTerm) return minisToFilter
 
-        // Check if minis already have IDs mapped
-        const firstMini = prevMinis[0]
-        if (firstMini.category_ids !== undefined) return prevMinis
-
-        return prevMinis.map(mini => ({
-          ...mini,
-          image_path: mini.image_path ? `${mini.image_path}?t=${Date.now()}` : null,
-          original_image_path: mini.original_image_path ? `${mini.original_image_path}?t=${Date.now()}` : null,
-          category_ids: mini.category_names ? 
-            categories.filter(cat => 
-              splitAndTrim(mini.category_names).includes(cat.name)
-            ).map(cat => cat.id.toString()) : [],
-          type_ids: mini.type_names ? 
-            types.filter(type => 
-              splitAndTrim(mini.type_names).includes(type.name)
-            ).map(type => type.id.toString()) : [],
-          proxy_type_ids: mini.proxy_type_names ? 
-            types.filter(type => 
-              splitAndTrim(mini.proxy_type_names).includes(type.name)
-            ).map(type => type.id.toString()) : [],
-          tag_ids: mini.tag_names ? 
-            tags.filter(tag => 
-              splitAndTrim(mini.tag_names).includes(tag.name)
-            ).map(tag => tag.id.toString()) : [],
-          product_set_ids: mini.product_set_names ? 
-            productSets.filter(set => {
-              const fullSetName = `${set.name} (${set.product_line_name} by ${set.manufacturer_name})`
-              return splitAndTrim(mini.product_set_names).includes(fullSetName)
-            }).map(set => set.id.toString()) : []
-        }))
-      })
-    }
-  }, [categories, types, tags, productSets]) // Removed minis from dependencies
-
-  // Update the filter function to include tags
-  const filterMinis = (minis) => {
-    if (!searchTerm) return minis
-
-    return minis.filter(mini => {
+    return minisToFilter.filter(mini => {
       const searchLower = searchTerm.toLowerCase()
-      
-      // Check each field
-      const nameMatch = mini.name?.toLowerCase().includes(searchLower)
-      const locationMatch = mini.location?.toLowerCase().includes(searchLower)
-      const categoriesMatch = mini.category_names?.toLowerCase().includes(searchLower)
-      const typesMatch = mini.type_names?.toLowerCase().includes(searchLower)
-      const proxyTypesMatch = mini.proxy_type_names?.toLowerCase().includes(searchLower)
-      const tagsMatch = mini.tag_names?.toLowerCase().includes(searchLower)
-
-      return nameMatch || locationMatch || categoriesMatch || typesMatch || proxyTypesMatch || tagsMatch
+      return (
+        mini.name?.toLowerCase().includes(searchLower) ||
+        mini.location?.toLowerCase().includes(searchLower) ||
+        mini.category_names?.toLowerCase().includes(searchLower) ||
+        mini.type_names?.toLowerCase().includes(searchLower) ||
+        mini.proxy_type_names?.toLowerCase().includes(searchLower) ||
+        mini.tag_names?.toLowerCase().includes(searchLower)
+      )
     })
   }
 
-  // Update the pagination calculation to use filtered minis
+  // Calculate pagination values
   const filteredMinis = filterMinis(minis)
+  const totalPages = Math.max(1, Math.ceil(filteredMinis.length / entriesPerPage))
   const currentMinis = filteredMinis.slice(
     (currentPage - 1) * entriesPerPage,
     currentPage * entriesPerPage
   )
-  const totalPages = Math.ceil(filteredMinis.length / entriesPerPage)
+
+  const handlePageChange = (pageNumber) => {
+    setCurrentPage(pageNumber)
+  }
+
+  const renderPaginationItems = () => {
+    const items = []
+    for (let number = 1; number <= totalPages; number++) {
+      items.push(
+        <Pagination.Item 
+          key={number} 
+          active={number === currentPage}
+          onClick={() => handlePageChange(number)}
+        >
+          {number}
+        </Pagination.Item>
+      )
+    }
+    return items
+  }
 
   // Handle View Type Change
   const handleViewTypeChange = async (type) => {
@@ -188,14 +209,14 @@ const MiniOverview = () => {
   }
 
   // Handle Entries Per Page Change
-  const handleEntriesPerPageChange = async (value) => {
-    const newValue = parseInt(value)
-    setEntriesPerPage(newValue)
-    setCurrentPage(1) // Reset to first page when changing entries per page
+  const handleEntriesPerPageChange = async (e) => {
+    const value = parseInt(e.target.value) || 10 // Provide default value if parsing fails
+    setEntriesPerPage(value)
+    setCurrentPage(1)
     
     try {
       await api.put(`/api/settings/collection_show_entries_per_page`, {
-        value: newValue.toString()
+        value: value.toString() // Convert to string when saving to API
       })
     } catch (error) {
       console.error('Error saving setting:', error)
@@ -247,66 +268,6 @@ const MiniOverview = () => {
     setShowImageModal(true)
   }
 
-  // Add this function to handle page changes
-  const handlePageChange = (pageNumber) => {
-    setCurrentPage(pageNumber)
-  }
-
-  // Add this function to generate pagination items
-  const renderPaginationItems = () => {
-    const items = []
-    
-    // Always show first page
-    items.push(
-      <Pagination.Item
-        key={1}
-        active={currentPage === 1}
-        onClick={() => handlePageChange(1)}
-      >
-        1
-      </Pagination.Item>
-    )
-
-    // Add ellipsis if needed
-    if (currentPage > 3) {
-      items.push(<Pagination.Ellipsis key="ellipsis1" />)
-    }
-
-    // Add pages around current page
-    for (let number = Math.max(2, currentPage - 1); number <= Math.min(totalPages - 1, currentPage + 1); number++) {
-      if (number === 1 || number === totalPages) continue
-      items.push(
-        <Pagination.Item
-          key={number}
-          active={currentPage === number}
-          onClick={() => handlePageChange(number)}
-        >
-          {number}
-        </Pagination.Item>
-      )
-    }
-
-    // Add ellipsis if needed
-    if (currentPage < totalPages - 2) {
-      items.push(<Pagination.Ellipsis key="ellipsis2" />)
-    }
-
-    // Always show last page if there is more than one page
-    if (totalPages > 1) {
-      items.push(
-        <Pagination.Item
-          key={totalPages}
-          active={currentPage === totalPages}
-          onClick={() => handlePageChange(totalPages)}
-        >
-          {totalPages}
-        </Pagination.Item>
-      )
-    }
-
-    return items
-  }
-
   // Add this new handler
   const handleMiniNameClick = (mini) => {
     setSelectedMini(mini)
@@ -325,6 +286,48 @@ const MiniOverview = () => {
       setRecentlyUpdatedMiniId(null)
     }, 3000)
   }
+
+  useEffect(() => {
+    // Initialize all tooltips
+    const tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+    tooltipTriggerList.map(function (tooltipTriggerEl) {
+      return new bootstrap.Tooltip(tooltipTriggerEl, {
+        delay: { show: 0, hide: 0 }
+      })
+    })
+
+    // Cleanup function to destroy tooltips when component unmounts
+    return () => {
+      tooltipTriggerList.map(function (tooltipTriggerEl) {
+        const tooltip = bootstrap.Tooltip.getInstance(tooltipTriggerEl)
+        if (tooltip) {
+          tooltip.dispose()
+        }
+      })
+    }
+  }, [minis]) // Re-run when minis changes
+
+  useEffect(() => {
+    // Add custom styles to head
+    const styleSheet = document.createElement("style")
+    styleSheet.innerText = tooltipStyles
+    document.head.appendChild(styleSheet)
+
+    // Cleanup
+    return () => {
+      document.head.removeChild(styleSheet)
+    }
+  }, [])
+
+  useEffect(() => {
+    const styleSheet = document.createElement("style")
+    styleSheet.innerText = tableStyles
+    document.head.appendChild(styleSheet)
+
+    return () => {
+      document.head.removeChild(styleSheet)
+    }
+  }, [])
 
   if (error) return <div>Error: {error}</div>
 
@@ -364,171 +367,242 @@ const MiniOverview = () => {
         </div>
       </PageHeader>
 
-      <div className="bg-white p-4 rounded shadow-sm">
-        <div className="d-flex justify-content-between align-items-center mb-4">
-          <div className="d-flex align-items-center">
-            <div className="d-flex align-items-center me-4" style={{ whiteSpace: 'nowrap' }}>
-              <span className="me-2">Show</span>
+      {error && <Alert variant="danger" className="mb-4">{error}</Alert>}
+
+      {/* Wrap table in Card component */}
+      <Card className="mb-4">
+        <Card.Body className="pb-0 pt-2">
+          <div className="d-flex justify-content-between align-items-center mb-2" style={{ minHeight: '32px' }}>
+            <div className="d-flex align-items-center">
+              <FontAwesomeIcon icon={faPhotoFilm} className="text-info me-2" />
+              <h5 className="mb-0">Collection Overview</h5>
+            </div>
+            <div className="d-flex align-items-center gap-2">
+              <span className="text-muted me-2" style={{ fontSize: '0.875rem' }}>Show</span>
               <Form.Select 
                 size="sm" 
-                style={{ width: '65px' }}  
-                value={entriesPerPage}
-                onChange={(e) => handleEntriesPerPageChange(e.target.value)}
+                value={entriesPerPage.toString()} // Convert to string to avoid NaN warning
+                onChange={handleEntriesPerPageChange}
+                style={{ 
+                  width: '60px',
+                  fontSize: '0.875rem',
+                  padding: '0.25rem 0.5rem',
+                  height: 'auto'
+                }}
+                className="mx-2"
               >
                 <option value="10">10</option>
                 <option value="25">25</option>
                 <option value="50">50</option>
               </Form.Select>
-              <span className="ms-2">entries</span>
+              <span className="text-muted" style={{ fontSize: '0.875rem' }}>entries</span>
             </div>
-            <Form.Control
-              type="text"
-              placeholder="Search..."
-              size="sm"
-              value={searchTerm}
-              onChange={(e) => {
-                setSearchTerm(e.target.value)
-                setCurrentPage(1) // Reset to first page when searching
-              }}
-              className="me-4"
-              style={{ width: '200px' }}
-            />
           </div>
-        </div>
 
-        {/* Conditional rendering based on view type */}
-        {viewType === 'table' ? (
-          <>
-            <Table hover responsive className="table-with-actions small-text">
-              <thead>
-                <tr>
-                  <th style={{ width: '50px' }}></th>
-                  <th style={{ whiteSpace: 'nowrap' }}>Name</th>
-                  <th style={{ whiteSpace: 'nowrap' }}>Location</th>
-                  <th>Categories</th>
-                  <th>Types</th>
-                  <th>Proxy Types</th>
-                  <th>Product Sets</th>
-                  <th style={{ width: '150px', maxWidth: '150px' }}>Tags</th>
-                  <th style={{ textAlign: 'center' }}>QTY</th>
-                  <th className="actions-cell"></th>
-                </tr>
-              </thead>
-              <tbody>
-                {currentMinis.map(mini => (
-                  <tr 
-                    key={mini.id}
-                    className={mini.id === recentlyUpdatedMiniId ? 'highlight-update' : ''}
-                  >
-                    <td className="text-center">
-                      {mini.image_path && (
-                        <img 
-                          src={mini.image_path} 
-                          alt={mini.name}
-                          style={{ 
-                            width: '40px', 
-                            height: '40px', 
-                            objectFit: 'contain',
-                            cursor: 'pointer'
-                          }}
-                          onClick={() => handleImageClick(mini)}
-                          title="Click to view full image"
-                        />
-                      )}
-                    </td>
-                    <td style={{ whiteSpace: 'nowrap' }}>
-                      <span 
-                        style={{ cursor: 'pointer' }}
-                        onClick={() => handleMiniNameClick(mini)}
-                      >
-                        {mini.name}
-                      </span>
-                    </td>
-                    <td style={{ whiteSpace: 'nowrap' }}>{mini.location}</td>
-                    <td>{mini.category_names?.split(',').join(', ')}</td>
-                    <td>{mini.type_names?.split(',').join(', ')}</td>
-                    <td>{mini.proxy_type_names?.split(',').join(', ')}</td>
-                    <td>
-                      {mini.product_set_names?.split(',').map((setName, index) => {
-                        const matches = setName.trim().match(/(.+?)\s*\((.+?)\s+by\s+(.+?)\)/)
-                        if (matches) {
-                          const [_, setName, productLine, manufacturer] = matches
-                          return (
-                            <div key={index} style={{ marginBottom: index < mini.product_set_names.split(',').length - 1 ? '1rem' : 0 }}>
-                              <div className="fw-bold">{manufacturer}</div>
-                              <div>· {productLine}</div>
-                              <div>·· {setName}</div>
-                            </div>
-                          )
-                        }
-                        return setName
-                      })}
-                    </td>
-                    <td style={{ width: '150px', maxWidth: '150px', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                      {mini.tag_names?.split(',').join(', ')}
-                    </td>
-                    <td style={{ textAlign: 'center' }}>{mini.quantity}</td>
-                    <td className="actions-cell">
-                      <TableButton
-                        type="edit"
-                        onClick={() => handleEditMini(mini)}
-                        className="me-2"
-                      />
-                      <TableButton
-                        type="delete"
-                        onClick={() => handleDeleteMini(mini.id)}
-                      />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </Table>
-          </>
-        ) : (
-          <>
-            <MiniCardGrid
-              minis={currentMinis}  // Use currentMinis instead of minis
-              onEdit={handleEditMini}
-              onDelete={handleDeleteMini}
-              onImageClick={handleImageClick}
-              darkMode={darkMode}
-            />
-          </>
-        )}
+          {/* Conditional rendering based on view type */}
+          {viewType === 'table' ? (
+            <>
+              <div className="table-wrapper">
+                <Table hover responsive className="custom-table table-with-actions small-text mb-0">
+                  <thead>
+                    <tr>
+                      <th style={{ width: '50px' }}></th>
+                      <th>Name</th>
+                      <th>Categories</th>
+                      <th>Types</th>
+                      <th>Product Set</th>
+                      <th>Tags</th>
+                      <th>Base Size</th>
+                      <th>Location</th>
+                      <th style={{ width: '60px', textAlign: 'center' }}>QTY</th>
+                      <th className="actions-cell"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {currentMinis.map(mini => (
+                      <tr key={mini.id}>
+                        <td className="text-center align-middle">
+                          {mini.image_path && (
+                            <img 
+                              src={mini.image_path} 
+                              alt={mini.name}
+                              style={{ width: '40px', height: '40px', objectFit: 'contain' }}
+                              onClick={() => handleImageClick(mini)}
+                            />
+                          )}
+                        </td>
+                        
+                        {/* Name Column */}
+                        <td className="align-middle">
+                          <span 
+                            className="fw-bold"
+                            style={{ cursor: 'pointer' }}
+                            onClick={() => handleMiniNameClick(mini)}
+                          >
+                            {mini.name}
+                          </span>
+                        </td>
 
-        {/* Add pagination */}
-        <div className="d-flex justify-content-center mt-4">
-          <Pagination className="mb-0">
-            <Pagination.First
-              onClick={() => handlePageChange(1)}
-              disabled={currentPage === 1}
-              className="border bg-light"
-            />
-            <Pagination.Prev
-              onClick={() => handlePageChange(currentPage - 1)}
-              disabled={currentPage === 1}
-              className="border bg-light"
-            />
-            
-            {renderPaginationItems().map(item => 
-              React.cloneElement(item, {
-                className: `border ${item.props.active ? 'bg-primary' : 'bg-light'}`
-              })
-            )}
-            
-            <Pagination.Next
-              onClick={() => handlePageChange(currentPage + 1)}
-              disabled={currentPage === totalPages}
-              className="border bg-light"
-            />
-            <Pagination.Last
-              onClick={() => handlePageChange(totalPages)}
-              disabled={currentPage === totalPages}
-              className="border bg-light"
-            />
-          </Pagination>
-        </div>
-      </div>
+                        {/* Categories Column */}
+                        <td className="align-middle">
+                          {mini.category_ids?.map((id) => {
+                            const category = categories.find(c => c.id.toString() === id)
+                            return category ? (
+                              <span key={id} className="badge bg-secondary me-1 mb-1">{category.name}</span>
+                            ) : null
+                          })}
+                        </td>
+                        
+                        {/* Combined Types Column */}
+                        <td className="align-middle">
+                          {/* Regular Types */}
+                          {mini.type_ids?.map((id) => {
+                            const type = types.find(t => t.id.toString() === id)
+                            return type ? (
+                              <span key={id} className="badge bg-info me-1 mb-1">{type.name}</span>
+                            ) : null
+                          })}
+                          {/* Proxy Types - shown after regular types */}
+                          {mini.proxy_type_ids?.map((id) => {
+                            const proxyType = types.find(t => t.id.toString() === id)
+                            return proxyType ? (
+                              <span key={id} className="badge bg-warning text-dark me-1 mb-1">
+                                {proxyType.name}
+                              </span>
+                            ) : null
+                          })}
+                        </td>
+
+                        {/* Product Set Column */}
+                        <td 
+                          className="align-middle"
+                          onMouseEnter={() => mini.product_set_name && mini.product_set_name !== '-' ? setShowProductSetInfo(mini.id) : null}
+                          onMouseLeave={() => setShowProductSetInfo(null)}
+                          ref={(el) => el && (el.dataset.miniId = mini.id)}
+                        >
+                          {mini.product_set_name && mini.product_set_name !== '-' ? (
+                            <>
+                              <span>
+                                {mini.product_set_name}
+                              </span>
+                              <MouseOverInfo
+                                show={showProductSetInfo === mini.id}
+                                target={document.querySelector(`[data-mini-id="${mini.id}"]`)}
+                                title="Product Set Information"
+                                icon={faCubesStacked}
+                                headerColor="success"
+                                onMouseEnter={() => setShowProductSetInfo(mini.id)}
+                                onMouseLeave={() => setShowProductSetInfo(null)}
+                              >
+                                <div className="d-flex flex-column gap-1">
+                                  <div>
+                                    <strong>Manufacturer:</strong> {mini.manufacturer_name}
+                                  </div>
+                                  <div>
+                                    <strong>Product Line:</strong> {mini.product_line_name}
+                                  </div>
+                                  <div>
+                                    <strong>Set:</strong> {mini.product_set_name}
+                                  </div>
+                                </div>
+                              </MouseOverInfo>
+                            </>
+                          ) : (
+                            <span className="text-muted">None</span>
+                          )}
+                        </td>
+
+                        {/* Tags Column (formerly part of Details) */}
+                        <td className="align-middle">
+                          {mini.tag_ids?.map((id) => {
+                            const tag = tags.find(t => t.id.toString() === id)
+                            return tag ? (
+                              <span key={id} className="badge bg-primary me-1">{tag.name}</span>
+                            ) : null
+                          })}
+                        </td>
+
+                        {/* Base Size Column */}
+                        <td className="align-middle">
+                          {mini.base_size_name ? 
+                            mini.base_size_name.charAt(0).toUpperCase() + mini.base_size_name.slice(1) 
+                            : 'N/A'}
+                        </td>
+
+                        {/* Location Column */}
+                        <td className="align-middle">
+                          {mini.location || 'N/A'}
+                        </td>
+
+                        {/* Quantity Column - moved to after Location */}
+                        <td className="align-middle text-center">
+                          {mini.quantity}
+                        </td>
+
+                        {/* Actions Column */}
+                        <td className="actions-cell align-middle">
+                          <TableButton
+                            type="edit"
+                            onClick={() => handleEditMini(mini)}
+                            className="me-2"
+                          />
+                          <TableButton
+                            type="delete"
+                            onClick={() => handleDeleteMini(mini.id)}
+                          />
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </Table>
+              </div>
+
+              {/* Pagination control */}
+              <div className="d-flex justify-content-center py-3">
+                <Pagination className="mb-0">
+                  <Pagination.First
+                    onClick={() => handlePageChange(1)}
+                    disabled={currentPage === 1}
+                    className="border"
+                  />
+                  <Pagination.Prev
+                    onClick={() => handlePageChange(currentPage - 1)}
+                    disabled={currentPage === 1}
+                    className="border"
+                  />
+                  
+                  {renderPaginationItems().map(item => 
+                    React.cloneElement(item, {
+                      className: `border ${item.props.active ? 'active' : ''}`
+                    })
+                  )}
+                  
+                  <Pagination.Next
+                    onClick={() => handlePageChange(currentPage + 1)}
+                    disabled={currentPage === totalPages}
+                    className="border"
+                  />
+                  <Pagination.Last
+                    onClick={() => handlePageChange(totalPages)}
+                    disabled={currentPage === totalPages}
+                    className="border"
+                  />
+                </Pagination>
+              </div>
+            </>
+          ) : (
+            <>
+              <MiniCardGrid
+                minis={currentMinis}
+                onEdit={handleEditMini}
+                onDelete={handleDeleteMini}
+                onImageClick={handleImageClick}
+                darkMode={darkMode}
+              />
+            </>
+          )}
+        </Card.Body>
+      </Card>
 
       {/* Add Mini Modal */}
       <MiniOverviewAdd 
