@@ -60,6 +60,37 @@ const MiniOverviewAdd = ({ show, handleClose, categories, types, tags, productSe
     fetchPaintedByOptions()
   }, [])
 
+  // Image compression function
+  const compressImage = async (file) => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        const img = new Image()
+        img.onload = () => {
+          // Validate that image is square
+          if (img.width !== img.height) {
+            reject(new Error('Image must be square (same width and height)'))
+            return
+          }
+
+          const canvas = document.createElement('canvas')
+          canvas.width = img.width
+          canvas.height = img.height
+
+          const ctx = canvas.getContext('2d')
+          ctx.drawImage(img, 0, 0)
+
+          // Convert to WebP with original quality
+          const compressedImage = canvas.toDataURL('image/webp', 1.0)
+          resolve(compressedImage)
+        }
+        img.src = e.target.result
+      }
+      reader.onerror = reject
+      reader.readAsDataURL(file)
+    })
+  }
+
   // Handler for image upload and compression
   const handleImageUpload = async (file) => {
     if (!file) return
@@ -70,54 +101,14 @@ const MiniOverviewAdd = ({ show, handleClose, categories, types, tags, productSe
         ...prev,
         image_path: compressedImage
       }))
+      setError(null) // Clear any previous errors
     } catch (error) {
-      setError('Failed to compress image')
+      setNewMini(prev => ({
+        ...prev,
+        image_path: '' // Clear the image if validation fails
+      }))
+      setError(error.message)
     }
-  }
-
-  // Image compression function
-  const compressImage = async (file) => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader()
-      reader.onload = (e) => {
-        const img = new Image()
-        img.onload = () => {
-          const canvas = document.createElement('canvas')
-          let width = img.width
-          let height = img.height
-
-          // Max dimensions
-          const MAX_WIDTH = 1200
-          const MAX_HEIGHT = 1200
-
-          // Calculate new dimensions
-          if (width > height) {
-            if (width > MAX_WIDTH) {
-              height *= MAX_WIDTH / width
-              width = MAX_WIDTH
-            }
-          } else {
-            if (height > MAX_HEIGHT) {
-              width *= MAX_HEIGHT / height
-              height = MAX_HEIGHT
-            }
-          }
-
-          canvas.width = width
-          canvas.height = height
-
-          const ctx = canvas.getContext('2d')
-          ctx.drawImage(img, 0, 0, width, height)
-
-          // Convert to WebP with reduced quality
-          const compressedImage = canvas.toDataURL('image/webp', 0.8)
-          resolve(compressedImage)
-        }
-        img.src = e.target.result
-      }
-      reader.onerror = reject
-      reader.readAsDataURL(file)
-    })
   }
 
   // Handler for adding a new mini

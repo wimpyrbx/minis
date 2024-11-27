@@ -48,3 +48,21 @@ tr.highlight-update::after {
 .table-responsive {
     overflow-x: hidden;
 }
+
+/* Add to your existing CSS */
+.hover-shadow:hover {
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transform: translateY(-1px);
+}
+
+[data-bs-theme="dark"] .hover-shadow:hover {
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+[data-bs-theme="dark"] td div[style*="imageCell"] {
+  background-color: var(--bs-gray-800);
+}
+
+[data-bs-theme="dark"] td div[style*="imageCell"] svg {
+  color: var(--bs-gray-600);
+}

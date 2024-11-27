@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { Container, Card, Button, Table, Row, Col, Form, Alert } from 'react-bootstrap'
 import { faPhotoFilm, faPlus, faList, faTableCells, faCubesStacked } from '@fortawesome/free-solid-svg-icons'
+import { faImage } from '@fortawesome/free-regular-svg-icons'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { api } from '../database/db'
 import MiniOverviewAdd from './MiniOverviewAdd'
@@ -17,9 +18,25 @@ import Pill from '../components/Pill/Pill'
 import PaginationControl from '../components/Pagination/Pagination'
 import AddButton from '../components/Buttons/AddButton'
 import { CSSTransition, TransitionGroup } from 'react-transition-group'
+import MiniImage from '../components/MiniImage/MiniImage'
 
 const styles = {
-  fontSize: '0.75rem'  // Even smaller, equivalent to 12px
+  fontSize: '0.75rem',  // Even smaller, equivalent to 12px
+  imageCell: {
+    width: '50px',
+    height: '50px',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'var(--bs-gray-200)',
+    borderRadius: '4px',
+    cursor: 'pointer',
+    transition: 'all 0.2s ease',
+  },
+  placeholderIcon: {
+    color: 'var(--bs-gray-400)',
+    fontSize: '1.2rem'
+  }
 }
 
 const MiniOverview = () => {
@@ -128,63 +145,25 @@ const MiniOverview = () => {
     
     const searchLower = searchTerm.toLowerCase();
     
-    // Check name
     const nameMatch = mini.name?.toLowerCase().includes(searchLower);
-    
-    // Check categories
     const categoryMatch = mini.category_names?.toLowerCase().includes(searchLower);
-    
-    // Check types (both regular and proxy)
     const typeMatch = mini.type_names?.toLowerCase().includes(searchLower) || 
                      mini.proxy_type_names?.toLowerCase().includes(searchLower);
-    
-    // Check tags
     const tagMatch = mini.tag_names?.toLowerCase().includes(searchLower);
-    
-    // Check location
     const locationMatch = mini.location?.toLowerCase().includes(searchLower);
 
     return nameMatch || categoryMatch || typeMatch || tagMatch || locationMatch;
   });
 
+  // Calculate pagination based on filtered minis
+  const indexOfLastMini = currentPage * entriesPerPage;
+  const indexOfFirstMini = indexOfLastMini - entriesPerPage;
+  const currentMinis = filteredMinis.slice(indexOfFirstMini, indexOfLastMini);
+  const totalPages = Math.ceil(filteredMinis.length / entriesPerPage);
+
   // Early returns for loading and error states
   if (loading) return <div>Loading...</div>
   if (error) return <div>Error: {error}</div>
-
-  // Calculate pagination AFTER we know we have valid data
-  const indexOfLastMini = currentPage * entriesPerPage
-  const indexOfFirstMini = indexOfLastMini - entriesPerPage
-  const currentMinis = Array.isArray(minis) ? minis.slice(indexOfFirstMini, indexOfLastMini) : []
-  const totalPages = Math.ceil((Array.isArray(minis) ? minis.length : 0) / entriesPerPage)
-
-  const handleEditMini = (mini) => {
-    setEditingMini(mini)
-    setShowEditModal(true)
-  }
-
-  const handleDeleteMini = async (id) => {
-    if (window.confirm('Are you sure you want to delete this mini?')) {
-      try {
-        await api.delete(`/api/minis/${id}`)
-        setMinis(prevMinis => prevMinis.filter(mini => mini.id !== id))
-      } catch (err) {
-        setError(err.message)
-      }
-    }
-  }
-
-  const handleImageClick = (mini) => {
-    setSelectedImage({
-      path: mini.original_image_path,
-      name: mini.name
-    })
-    setShowImageModal(true)
-  }
-
-  const handleMiniNameClick = (mini) => {
-    setSelectedMini(mini)
-    setShowViewer(true)
-  }
 
   // Add handlers for toggling expansions
   const handleTagExpand = (miniId) => {
@@ -225,15 +204,15 @@ const MiniOverview = () => {
 
   // Add handler for entries per page change
   const handleEntriesPerPageChange = async (e) => {
-    const value = parseInt(e.target.value)
-    setEntriesPerPage(value)
-    setCurrentPage(1)
+    const value = parseInt(e.target.value);
+    setEntriesPerPage(value);
+    setCurrentPage(1);  // Reset to first page when changing entries per page
     try {
-      await api.put('/api/settings/collection_show_entries_per_page', { value: value.toString() })
+      await api.put('/api/settings/collection_show_entries_per_page', { value: value.toString() });
     } catch (err) {
-      console.error('Error saving entries per page setting:', err)
+      console.error('Error saving entries per page setting:', err);
     }
-  }
+  };
 
   // Update the handleMiniUpdate function
   const handleMiniUpdate = (updatedMini) => {
@@ -256,8 +235,8 @@ const MiniOverview = () => {
 
   // Add pagination handler
   const handlePageChange = (page) => {
-    setCurrentPage(page)
-  }
+    setCurrentPage(page);
+  };
 
   // Update the handleAddMini function
   const handleAddMini = async (newMiniData) => {
@@ -301,6 +280,18 @@ const MiniOverview = () => {
       console.error('Error adding mini:', err)
       setError(err.response?.data?.error || 'Failed to add mini.')
     }
+  }
+
+  // Add this with the other handlers
+  const handleMiniNameClick = (mini) => {
+    setSelectedMini(mini)
+    setShowViewer(true)
+  }
+
+  // Add this function with the other handlers in MiniOverview.jsx
+  const handleEditMini = (mini) => {
+    setEditingMini(mini)
+    setShowEditModal(true)
   }
 
   return (
@@ -375,7 +366,7 @@ const MiniOverview = () => {
           </Form.Select>
         </div>
 
-        <Card className="mb-4">
+        <Card className="mb-2">
           <Card.Body className="p-0">
             {viewType === 'table' ? (
               // Table View
@@ -394,20 +385,19 @@ const MiniOverview = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredMinis.map((mini) => (
+                    {currentMinis.map((mini) => (
                       <tr 
                         key={mini.id}
                         data-mini-id={mini.id}
                       >
-                        <td className="text-center align-middle">
-                          {mini.image_path && (
-                            <img 
-                              src={mini.image_path} 
-                              alt={mini.name}
-                              style={{ width: '40px', height: '40px', objectFit: 'contain' }}
-                              onClick={() => handleImageClick(mini)}
-                            />
-                          )}
+                        <td className="text-center align-middle p-1">
+                          <MiniImage
+                            src={mini.image_path}
+                            alt={mini.name}
+                            onClick={() => mini.image_path ? handleImageClick(mini) : null}
+                            size={40}
+                            useOriginal={false}
+                          />
                         </td>
                         <td className="align-middle">
                           <span 
@@ -615,16 +605,17 @@ const MiniOverview = () => {
                 onDeleteClick={handleDeleteMini}
               />
             )}
-
-            <div className="d-flex justify-content-center pt-3 pb-2">
-              <PaginationControl
-                currentPage={currentPage}
-                totalPages={totalPages}
-                onPageChange={handlePageChange}
-              />
-            </div>
           </Card.Body>
         </Card>
+
+        {/* Pagination moved outside the card */}
+        <div className="d-flex justify-content-center mb-3">
+          <PaginationControl
+            currentPage={currentPage}
+            totalPages={totalPages}
+            onPageChange={handlePageChange}
+          />
+        </div>
 
         {/* Modals */}
         <MiniOverviewAdd 

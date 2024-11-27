@@ -3,23 +3,20 @@ import { Card } from 'react-bootstrap'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faImage, faPencil, faTrash } from '@fortawesome/free-solid-svg-icons'
 import TableButton from '../TableButton'
+import MiniImage from '../MiniImage/MiniImage'
 
 const MiniCard = ({ mini, onEdit, onDelete, onImageClick }) => {
   return (
     <Card className="h-100 mini-card">
       <div className="mini-card-image-container">
-        {mini.image_path ? (
-          <Card.Img 
-            variant="top" 
-            src={mini.image_path} 
-            onClick={() => onImageClick(mini)}
-            style={{ cursor: 'pointer' }}
-          />
-        ) : (
-          <div className="no-image-placeholder">
-            No Image
-          </div>
-        )}
+        <MiniImage
+          src={mini.image_path}
+          alt={mini.name}
+          onClick={() => onImageClick(mini)}
+          size={200}
+          className="w-100"
+          useOriginal={true}
+        />
       </div>
       <Card.Body>
         <Card.Title>

@@ -119,14 +119,36 @@ const ProductAdmin = () => {
 
   const handleAddProductSet = async (e) => {
     e.preventDefault()
+    
     try {
-      await api.post('/api/product-sets', newProductSet)
-      setNewProductSet({ name: '', product_line_id: '' })
-      setSelectedManufacturerForSets('')  // Clear the filter
-      manufacturerSelectForSetsRef.current?.focus()
+      // Ensure we have a valid product line ID
+      if (!newProductSet.product_line_id) {
+        setError('Please select a product line')
+        return
+      }
+
+      const payload = {
+        name: newProductSet.name.trim(),
+        product_line_id: parseInt(newProductSet.product_line_id)
+      }
+      const response = await api.post('/api/product-sets', payload)
+
+      console.log('Response:', response.data)
+      
+      // Reset form and refresh data
+      setNewProductSet({
+        name: '',
+        product_line_id: ''
+      })
+      setSelectedManufacturerForSets('')
       fetchData()
     } catch (err) {
-      setError(err.message)
+      console.error('Error details:', {
+        message: err.message,
+        response: err.response?.data,
+        status: err.response?.status
+      })
+      setError(err.response?.data?.error || err.message || 'Failed to add product set')
     }
   }
 
@@ -307,6 +329,15 @@ const ProductAdmin = () => {
            selectedManufacturerForLines !== '' ||
            selectedManufacturerForSets !== '';
   };
+
+  // Update the product line selection handler
+  const handleProductLineChange = (e) => {
+    const lineId = e.target.value
+    setNewProductSet(prev => ({
+      ...prev,
+      product_line_id: lineId // This will be a string, but we'll convert it in handleAddProductSet
+    }))
+  }
 
   return (
     <Container fluid className="content">
@@ -618,23 +649,17 @@ const ProductAdmin = () => {
                       />
                       <Form.Select
                         value={newProductSet.product_line_id}
-                        onChange={(e) => {
-                          if (!e.target.value) {
-                            setNewProductSet({ name: '', product_line_id: '' })
-                          } else {
-                            setNewProductSet({...newProductSet, product_line_id: e.target.value})
-                          }
-                        }}
+                        onChange={handleProductLineChange}
                         required
-                        disabled={!selectedManufacturerForSets}
                         style={{ paddingLeft: '35px' }}
                         className="placeholder-light"
+                        disabled={!selectedManufacturerForSets}
                       >
                         <option value="">Product Line...</option>
                         {productLines
                           .filter(line => line.company_id.toString() === selectedManufacturerForSets)
                           .map(line => (
-                            <option key={line.id} value={line.id}>
+                            <option key={line.id} value={line.id.toString()}>
                               {line.name}
                             </option>
                           ))}

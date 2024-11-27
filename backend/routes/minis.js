@@ -2,6 +2,9 @@ const express = require('express')
 const router = express.Router()
 const multer = require('multer')
 const upload = multer()
+const sharp = require('sharp')
+const path = require('path')
+const fs = require('fs').promises
 
 // Routes
 router.get('/', async (req, res) => {
@@ -36,7 +39,18 @@ router.get('/', async (req, res) => {
       ORDER BY m.id DESC
     `)
 
-    res.json(minis)
+    // Add image paths to each mini
+    const minisWithImages = minis.map(mini => {
+      const x = mini.id.toString()[0]
+      const y = mini.id.toString().length > 1 ? mini.id.toString()[1] : '0'
+      return {
+        ...mini,
+        image_path: `/images/minis/${x}/${y}/${mini.id}.webp`,
+        original_image_path: `/images/minis/originals/${x}/${y}/${mini.id}.webp`
+      }
+    })
+
+    res.json(minisWithImages)
   } catch (error) {
     res.status(500).json({ error: error.message })
   }
@@ -50,7 +64,7 @@ router.post('/', upload.none(), async (req, res) => {
       name, description, location,
       quantity, categories, types, proxy_types, 
       tags, painted_by, base_size_id,
-      product_sets
+      product_sets, image
     } = req.body
 
     // Parse JSON strings if needed
@@ -81,6 +95,40 @@ router.post('/', upload.none(), async (req, res) => {
     )
 
     const miniId = result.lastID
+
+    // Handle image if provided
+    if (image) {
+      const imageBuffer = Buffer.from(image.split(',')[1], 'base64')
+      
+      // Calculate directory paths based on ID
+      const idStr = miniId.toString()
+      const x = idStr[0]
+      const y = idStr.length > 1 ? idStr[1] : '0'
+      
+      const originalDir = path.join('public', 'images', 'minis', 'originals', x, y)
+      const thumbDir = path.join('public', 'images', 'minis', x, y)
+      
+      // Ensure directories exist
+      await fs.mkdir(originalDir, { recursive: true })
+      await fs.mkdir(thumbDir, { recursive: true })
+      
+      const originalPath = path.join(originalDir, `${miniId}.webp`)
+      const thumbPath = path.join(thumbDir, `${miniId}.webp`)
+
+      // Save original image
+      await sharp(imageBuffer)
+        .webp({ quality: 100 })
+        .toFile(originalPath)
+
+      // Create and save thumbnail
+      await sharp(imageBuffer)
+        .resize(50, 50, {
+          fit: 'contain',
+          background: { r: 255, g: 255, b: 255, alpha: 1 }
+        })
+        .webp({ quality: 80 })
+        .toFile(thumbPath)
+    }
 
     // Handle tags
     if (parsedTags?.length > 0) {
@@ -134,7 +182,7 @@ router.post('/', upload.none(), async (req, res) => {
 
     await req.db.run('COMMIT')
 
-    // Fetch complete mini data
+    // Fetch complete mini data and add image paths
     const newMini = await req.db.get(`
       SELECT 
         m.*,
@@ -165,7 +213,16 @@ router.post('/', upload.none(), async (req, res) => {
       GROUP BY m.id
     `, miniId)
 
-    res.status(201).json(newMini)
+    // Add image paths
+    const x = miniId.toString()[0]
+    const y = miniId.toString().length > 1 ? miniId.toString()[1] : '0'
+    const miniWithImages = {
+      ...newMini,
+      image_path: `/images/minis/${x}/${y}/${miniId}.webp`,
+      original_image_path: `/images/minis/originals/${x}/${y}/${miniId}.webp`
+    }
+
+    res.status(201).json(miniWithImages)
 
   } catch (error) {
     await req.db.run('ROLLBACK')

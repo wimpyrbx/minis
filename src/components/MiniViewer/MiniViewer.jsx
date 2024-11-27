@@ -2,6 +2,7 @@ import React from 'react'
 import { Modal, Row, Col, Badge } from 'react-bootstrap'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faMapMarkerAlt, faBox, faPaintBrush, faRuler, faTags, faLayerGroup, faShapes, faMagicWandSparkles, faIndustry, faDragon } from '@fortawesome/free-solid-svg-icons'
+import MiniImage from '../MiniImage/MiniImage'
 import './MiniViewer.css'
 
 const MiniViewer = ({ show, onHide, mini, darkMode }) => {
@@ -36,8 +37,9 @@ const MiniViewer = ({ show, onHide, mini, darkMode }) => {
                 alt={mini.manufacturer_name}
                 className="header-manufacturer-logo"
                 onError={(e) => {
-                  e.target.style.display = 'none'
-                  e.target.nextSibling.style.display = 'block'
+                  if (e.target) {
+                    e.target.style.display = 'none'
+                  }
                 }}
               />
             )}
@@ -48,23 +50,16 @@ const MiniViewer = ({ show, onHide, mini, darkMode }) => {
         <Row>
           <Col md={5} className="mini-image-section">
             <div className="mini-image-container">
-              {mini.id ? (
-                <>
-                  <img 
-                    src={`/images/minis/originals/${mini.id.toString()[0]}/${mini.id.toString()[1] || '0'}/${mini.id}.webp`}
-                    alt={mini.name}
-                    className="mini-detail-image"
-                  />
-                  <div className="quantity-pill position-absolute top-0 end-0 m-2">
-                    QTY: {mini.quantity}
-                  </div>
-                </>
-              ) : (
-                <div className="no-image-placeholder">
-                  <FontAwesomeIcon icon={faDiceD20} size="3x" />
-                  <span>No Image Available</span>
-                </div>
-              )}
+              <MiniImage
+                src={mini.image_path}
+                alt={mini.name}
+                size={300}
+                showHoverEffect={false}
+                useOriginal={true}
+              />
+              <div className="quantity-pill position-absolute top-0 end-0 m-2">
+                QTY: {mini.quantity}
+              </div>
             </div>
             {mini.category_names && (
               <section className="detail-section mt-3">
