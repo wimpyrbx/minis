@@ -132,8 +132,6 @@ const ProductAdmin = () => {
         product_line_id: parseInt(newProductSet.product_line_id)
       }
       const response = await api.post('/api/product-sets', payload)
-
-      console.log('Response:', response.data)
       
       // Reset form and refresh data
       setNewProductSet({
@@ -181,7 +179,7 @@ const ProductAdmin = () => {
         await api.delete(`/api/product-sets/${id}`)
         fetchData()
       } catch (err) {
-        setError(err.message)
+        setError(err.response?.data?.error || err.message)
       }
     }
   }
