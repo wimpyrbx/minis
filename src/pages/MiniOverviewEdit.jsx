@@ -8,8 +8,12 @@ import TagInput from '../components/TagInput'
 import '../styles/ImageModal.css'
 import SearchableDropdown from '../components/SearchableDropdown'
 import Pill from '../components/Pill/Pill'
+import MiniImage from '../components/MiniImage/MiniImage'
+import { useTheme } from '../context/ThemeContext'
 
 const MiniOverviewEdit = ({ show, handleClose, categories, types, tags, productSets, setMinis, minis, baseSizes, mini }) => {
+  const { darkMode } = useTheme()
+
   // Form state for new mini
   const [newMini, setNewMini] = useState({
     name: '',
@@ -39,6 +43,9 @@ const MiniOverviewEdit = ({ show, handleClose, categories, types, tags, productS
 
   // Fetch painted_by options and update state
   const [paintedByOptions, setPaintedByOptions] = useState([])
+
+  // Add this with the other state variables at the top of the component
+  const [imagePreview, setImagePreview] = useState(mini?.original_image_path || '')
 
   useEffect(() => {
     const fetchPaintedByOptions = async () => {
@@ -94,12 +101,14 @@ const MiniOverviewEdit = ({ show, handleClose, categories, types, tags, productS
         ...prev,
         image_path: compressedImage
       }))
-      setError(null) // Clear any previous errors
+      setImagePreview(compressedImage) // Update preview with new image
+      setError(null)
     } catch (error) {
       setNewMini(prev => ({
         ...prev,
-        image_path: '' // Clear the image if validation fails
+        image_path: prev.original_image_path || '' // Revert to original image on error
       }))
+      setImagePreview(mini.original_image_path || '') // Reset preview to original
       setError(error.message)
     }
   }
@@ -131,7 +140,7 @@ const MiniOverviewEdit = ({ show, handleClose, categories, types, tags, productS
         name: mini.name || '',
         description: mini.description || '',
         location: mini.location || '',
-        image_path: mini.image_path || '',
+        image_path: mini.original_image_path || '',
         quantity: mini.quantity || 1,
         base_size_id: mini.base_size_id?.toString() || '3',
         categories: categoryIds,
@@ -153,7 +162,7 @@ const MiniOverviewEdit = ({ show, handleClose, categories, types, tags, productS
     }
   }, [show, mini, categories, types])
 
-  // Update handleSubmit to use PUT instead of POST
+  // Update handleSubmit to include image data if changed
   const handleSubmit = async (e) => {
     e.preventDefault()
     setError(null)
@@ -186,6 +195,11 @@ const MiniOverviewEdit = ({ show, handleClose, categories, types, tags, productS
         tags: newMini.tags,
         product_set_id: newMini.product_sets[0] || null,
         painted_by_id: newMini.painted_by
+      }
+
+      // Only include image data if it's different from the original
+      if (newMini.image_path && newMini.image_path !== mini.original_image_path) {
+        miniData.image = newMini.image_path
       }
 
       // Send data to server
@@ -271,7 +285,7 @@ const MiniOverviewEdit = ({ show, handleClose, categories, types, tags, productS
   }
 
   return (
-    <Modal show={show} onHide={handleClose} size="xl">
+    <Modal show={show} onHide={handleClose} size="lg">
       <Modal.Header closeButton>
         <Modal.Title>
           <FontAwesomeIcon icon={faDiceD20} className="me-2" />
@@ -303,7 +317,11 @@ const MiniOverviewEdit = ({ show, handleClose, categories, types, tags, productS
                       alignItems: 'center',
                       justifyContent: 'center',
                       cursor: 'pointer',
-                      position: 'relative'
+                      backgroundColor: darkMode ? 'var(--bs-gray-800)' : 'var(--bs-gray-200)',
+                      border: '1px solid var(--bs-gray-400)',
+                      borderRadius: '4px',
+                      position: 'relative',
+                      overflow: 'hidden'
                     }}
                     onClick={() => document.getElementById('add-image-upload').click()}
                     onDragOver={(e) => {
@@ -335,22 +353,21 @@ const MiniOverviewEdit = ({ show, handleClose, categories, types, tags, productS
                         }
                       }}
                     />
-                    {newMini.image_path ? (
-                      <img 
-                        src={newMini.image_path} 
-                        alt="Preview" 
-                        style={{ 
-                          maxHeight: '100%', 
-                          maxWidth: '100%', 
-                          objectFit: 'contain' 
-                        }} 
+                    {imagePreview ? (
+                      <img
+                        src={imagePreview}
+                        alt="Mini preview"
+                        style={{
+                          width: '100%',
+                          height: '100%',
+                          objectFit: 'contain'
+                        }}
                       />
                     ) : (
-                      <FontAwesomeIcon 
-                        icon={faImage} 
-                        size="2x" 
-                        className="text-muted" 
-                      />
+                      <div className="d-flex flex-column align-items-center justify-content-center text-muted">
+                        <FontAwesomeIcon icon={faImage} size="2x" className="mb-2" />
+                        <small>Click or drag image</small>
+                      </div>
                     )}
                   </div>
                 </Col>

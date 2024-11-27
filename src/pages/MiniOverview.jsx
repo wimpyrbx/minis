@@ -294,6 +294,23 @@ const MiniOverview = () => {
     setShowEditModal(true)
   }
 
+  // Add this function with the other handlers in MiniOverview.jsx
+  const handleDeleteMini = async (miniId) => {
+    if (!window.confirm('Are you sure you want to delete this mini?')) {
+      return
+    }
+
+    try {
+      await api.delete(`/api/minis/${miniId}`)
+      
+      // Remove the mini from state
+      setMinis(prevMinis => prevMinis.filter(mini => mini.id !== miniId))
+    } catch (err) {
+      console.error('Error deleting mini:', err)
+      setError(err.response?.data?.error || 'Failed to delete mini.')
+    }
+  }
+
   return (
 <Container fluid className="content">
       {/* Dark background wrapper */}

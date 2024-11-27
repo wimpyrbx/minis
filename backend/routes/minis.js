@@ -105,8 +105,8 @@ router.post('/', upload.none(), async (req, res) => {
       const x = idStr[0]
       const y = idStr.length > 1 ? idStr[1] : '0'
       
-      const originalDir = path.join('public', 'images', 'minis', 'originals', x, y)
-      const thumbDir = path.join('public', 'images', 'minis', x, y)
+      const originalDir = path.join(__dirname, '..', '..', 'public', 'images', 'minis', 'originals', x, y)
+      const thumbDir = path.join(__dirname, '..', '..', 'public', 'images', 'minis', x, y)
       
       // Ensure directories exist
       await fs.mkdir(originalDir, { recursive: true })
@@ -238,8 +238,43 @@ router.put('/:id', async (req, res) => {
     const {
       name, description, location,
       quantity, categories, types, proxy_types, 
-      tags, painted_by_id, base_size_id, product_set_id
+      tags, painted_by_id, base_size_id, product_set_id,
+      image
     } = req.body
+
+    // Handle image update if new image is provided
+    if (image) {
+      const imageBuffer = Buffer.from(image.split(',')[1], 'base64')
+      
+      // Calculate directory paths based on ID
+      const idStr = miniId.toString()
+      const x = idStr[0]
+      const y = idStr.length > 1 ? idStr[1] : '0'
+      
+      const originalDir = path.join(__dirname, '..', '..', 'public', 'images', 'minis', 'originals', x, y)
+      const thumbDir = path.join(__dirname, '..', '..', 'public', 'images', 'minis', x, y)
+      
+      // Ensure directories exist
+      await fs.mkdir(originalDir, { recursive: true })
+      await fs.mkdir(thumbDir, { recursive: true })
+      
+      const originalPath = path.join(originalDir, `${miniId}.webp`)
+      const thumbPath = path.join(thumbDir, `${miniId}.webp`)
+
+      // Save original image
+      await sharp(imageBuffer)
+        .webp({ quality: 100 })
+        .toFile(originalPath)
+
+      // Create and save thumbnail
+      await sharp(imageBuffer)
+        .resize(50, 50, {
+          fit: 'contain',
+          background: { r: 255, g: 255, b: 255, alpha: 1 }
+        })
+        .webp({ quality: 80 })
+        .toFile(thumbPath)
+    }
 
     // Update the main mini record
     await req.db.run(
@@ -355,14 +390,33 @@ router.delete('/:id', async (req, res) => {
   try {
     await req.db.run('BEGIN TRANSACTION')
 
+    const miniId = req.params.id
+    
+    // Delete the image files
+    try {
+      const idStr = miniId.toString()
+      const x = idStr[0]
+      const y = idStr.length > 1 ? idStr[1] : '0'
+      
+      const originalPath = path.join(__dirname, '..', '..', 'public', 'images', 'minis', 'originals', x, y, `${miniId}.webp`)
+      const thumbPath = path.join(__dirname, '..', '..', 'public', 'images', 'minis', x, y, `${miniId}.webp`)
+      
+      // Delete both image files if they exist
+      await fs.unlink(originalPath).catch(() => {}) // Ignore error if file doesn't exist
+      await fs.unlink(thumbPath).catch(() => {}) // Ignore error if file doesn't exist
+    } catch (err) {
+      console.error('Error deleting image files:', err)
+      // Continue with deletion even if image removal fails
+    }
+
     // Delete all relationships
-    await req.db.run('DELETE FROM mini_to_tags WHERE mini_id = ?', req.params.id)
-    await req.db.run('DELETE FROM mini_to_categories WHERE mini_id = ?', req.params.id)
-    await req.db.run('DELETE FROM mini_to_types WHERE mini_id = ?', req.params.id)
-    await req.db.run('DELETE FROM mini_to_proxy_types WHERE mini_id = ?', req.params.id)
+    await req.db.run('DELETE FROM mini_to_tags WHERE mini_id = ?', miniId)
+    await req.db.run('DELETE FROM mini_to_categories WHERE mini_id = ?', miniId)
+    await req.db.run('DELETE FROM mini_to_types WHERE mini_id = ?', miniId)
+    await req.db.run('DELETE FROM mini_to_proxy_types WHERE mini_id = ?', miniId)
 
     // Delete the mini itself
-    await req.db.run('DELETE FROM minis WHERE id = ?', req.params.id)
+    await req.db.run('DELETE FROM minis WHERE id = ?', miniId)
 
     await req.db.run('COMMIT')
     res.status(204).send()

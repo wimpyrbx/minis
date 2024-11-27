@@ -20,6 +20,9 @@ app.use(cors())
 app.use(express.json({ limit: '50mb' }))
 app.use(express.urlencoded({ limit: '50mb', extended: true }))
 
+// Add static file serving from parent public directory
+app.use(express.static(path.join(__dirname, '..', 'public')))
+
 // Database initialization
 let db = null
 
