@@ -245,7 +245,7 @@ const MiniOverviewAdd = ({ show, handleClose, categories, types, tags, productSe
                       justifyContent: 'center',
                       cursor: 'pointer',
                       backgroundColor: 'var(--bs-gray-800)',
-                      border: '1px solid var(--bs-gray-400)',
+                      border: '1px solid var(--bs-gray-700)',
                       borderRadius: '4px',
                       position: 'relative',
                       overflow: 'hidden'
