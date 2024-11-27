@@ -21,10 +21,15 @@ router.get('/database/:table', async (req, res) => {
         WHERE type='table' AND name=?
       `, [table])
 
+      const columns = await req.db.all(`
+        PRAGMA table_info(${table})
+      `)
+      const hasIdColumn = columns.some(col => col.name.toLowerCase() === 'id')
+
       records = await req.db.all(`
         SELECT * 
-        FROM ${table} 
-        ORDER BY id DESC 
+        FROM ${table}
+        ${hasIdColumn ? 'ORDER BY id DESC' : ''}
         LIMIT 10
       `)
     }
