@@ -8,8 +8,9 @@ import TagInput from '../components/TagInput'
 import '../styles/ImageModal.css'
 import SearchableDropdown from '../components/SearchableDropdown'
 import Pill from '../components/Pill/Pill'
+import MiniImage from '../components/MiniImage/MiniImage'
 
-const MiniOverviewAdd = ({ show, handleClose, categories, types, tags, productSets, setMinis, minis, baseSizes }) => {
+const MiniOverviewAdd = ({ show, handleClose, categories, types, tags, productSets, setMinis, minis, baseSizes, darkMode }) => {
   // Find the default product set (the one with manufacturer, product_line, and name all equal to "-")
   const defaultProductSet = productSets.find(set => 
     set.manufacturer_name === '-' && 
@@ -233,7 +234,7 @@ const MiniOverviewAdd = ({ show, handleClose, categories, types, tags, productSe
             <Card.Body>
               <Row>
                 <Col md={2}>
-                  <h6 className="mb-2">Image</h6>
+                  <h6 className="mb-2">Iasmage</h6>
                   <div 
                     className="image-drop-zone"
                     style={{
@@ -243,7 +244,11 @@ const MiniOverviewAdd = ({ show, handleClose, categories, types, tags, productSe
                       alignItems: 'center',
                       justifyContent: 'center',
                       cursor: 'pointer',
-                      position: 'relative'
+                      backgroundColor: 'var(--bs-gray-800)',
+                      border: '1px solid var(--bs-gray-400)',
+                      borderRadius: '4px',
+                      position: 'relative',
+                      overflow: 'hidden'
                     }}
                     onClick={() => document.getElementById('add-image-upload').click()}
                     onDragOver={(e) => {
@@ -275,23 +280,13 @@ const MiniOverviewAdd = ({ show, handleClose, categories, types, tags, productSe
                         }
                       }}
                     />
-                    {newMini.image_path ? (
-                      <img 
-                        src={newMini.image_path} 
-                        alt="Preview" 
-                        style={{ 
-                          maxHeight: '100%', 
-                          maxWidth: '100%', 
-                          objectFit: 'contain' 
-                        }} 
-                      />
-                    ) : (
-                      <FontAwesomeIcon 
-                        icon={faImage} 
-                        size="2x" 
-                        className="text-muted" 
-                      />
-                    )}
+                    <MiniImage
+                      src={newMini.image_path}
+                      alt="Mini preview"
+                      size={100}
+                      showHoverEffect={false}
+                      useOriginal={true}
+                    />
                   </div>
                 </Col>
                 <Col md={10}>

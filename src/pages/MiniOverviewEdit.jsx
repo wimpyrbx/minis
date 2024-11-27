@@ -9,11 +9,8 @@ import '../styles/ImageModal.css'
 import SearchableDropdown from '../components/SearchableDropdown'
 import Pill from '../components/Pill/Pill'
 import MiniImage from '../components/MiniImage/MiniImage'
-import { useTheme } from '../context/ThemeContext'
 
-const MiniOverviewEdit = ({ show, handleClose, categories, types, tags, productSets, setMinis, minis, baseSizes, mini }) => {
-  const { darkMode } = useTheme()
-
+const MiniOverviewEdit = ({ show, handleClose, categories, types, tags, productSets, setMinis, minis, baseSizes, mini, darkMode }) => {
   // Form state for new mini
   const [newMini, setNewMini] = useState({
     name: '',
@@ -285,7 +282,7 @@ const MiniOverviewEdit = ({ show, handleClose, categories, types, tags, productS
   }
 
   return (
-    <Modal show={show} onHide={handleClose} size="lg">
+    <Modal show={show} onHide={handleClose} size="xl">
       <Modal.Header closeButton>
         <Modal.Title>
           <FontAwesomeIcon icon={faDiceD20} className="me-2" />
@@ -317,7 +314,7 @@ const MiniOverviewEdit = ({ show, handleClose, categories, types, tags, productS
                       alignItems: 'center',
                       justifyContent: 'center',
                       cursor: 'pointer',
-                      backgroundColor: darkMode ? 'var(--bs-gray-800)' : 'var(--bs-gray-200)',
+                      backgroundColor: 'var(--bs-gray-800)',
                       border: '1px solid var(--bs-gray-400)',
                       borderRadius: '4px',
                       position: 'relative',
@@ -353,22 +350,13 @@ const MiniOverviewEdit = ({ show, handleClose, categories, types, tags, productS
                         }
                       }}
                     />
-                    {imagePreview ? (
-                      <img
-                        src={imagePreview}
-                        alt="Mini preview"
-                        style={{
-                          width: '100%',
-                          height: '100%',
-                          objectFit: 'contain'
-                        }}
-                      />
-                    ) : (
-                      <div className="d-flex flex-column align-items-center justify-content-center text-muted">
-                        <FontAwesomeIcon icon={faImage} size="2x" className="mb-2" />
-                        <small>Click or drag image</small>
-                      </div>
-                    )}
+                    <MiniImage
+                      src={imagePreview}
+                      alt="Mini preview"
+                      size={100}
+                      showHoverEffect={false}
+                      useOriginal={true}
+                    />
                   </div>
                 </Col>
                 <Col md={10}>

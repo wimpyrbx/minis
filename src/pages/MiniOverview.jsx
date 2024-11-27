@@ -662,6 +662,7 @@ const MiniOverview = () => {
             setMinis={setMinis}
             minis={minis}
             baseSizes={baseSizes}
+            darkMode={darkMode}
           />
         )}
 
