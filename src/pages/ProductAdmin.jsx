@@ -423,11 +423,13 @@ const ProductAdmin = () => {
                 data={getPaginatedData(manufacturers, manufacturersPage, entriesPerPage)}
                 renderCell={renderCell}
               />
-              <PaginationControl
+                <div className="d-flex justify-content-end" style={{ marginTop: '-10px', marginBottom: '17px' }}>
+                  <PaginationControl 
                 currentPage={manufacturersPage}
                 totalPages={getTotalPages(manufacturers.length, entriesPerPage)}
                 onPageChange={setManufacturersPage}
-              />
+                />
+              </div>
             </Card.Body>
           </Card>
         </Col>
@@ -557,11 +559,13 @@ const ProductAdmin = () => {
                 data={getPaginatedData(getFilteredProductLines(), productLinesPage, entriesPerPage)}
                 renderCell={renderCell}
               />
-              <PaginationControl
+                  <div className="d-flex justify-content-center" style={{ marginTop: '-10px', marginBottom: '17px' }}>
+                  <PaginationControl
                 currentPage={productLinesPage}
                 totalPages={getTotalPages(getFilteredProductLines().length, entriesPerPage)}
                 onPageChange={setProductLinesPage}
               />
+              </div>
             </Card.Body>
           </Card>
         </Col>
@@ -714,11 +718,13 @@ const ProductAdmin = () => {
                   }
                 }}
               />
-              <PaginationControl
+                  <div className="d-flex justify-content-center" style={{ marginTop: '-10px', marginBottom: '17px' }}>
+                  <PaginationControl
                 currentPage={productSetsPage}
                 totalPages={getTotalPages(getFilteredProductSets().length, entriesPerPage)}
                 onPageChange={setProductSetsPage}
               />
+              </div>
             </Card.Body>
           </Card>
         </Col>

@@ -23,10 +23,9 @@ const styles = {
 }
 
 const MiniOverview = () => {
-  // 1. Context hooks
   const { darkMode } = useTheme()
-  
-  // 2. State hooks - data
+
+  // State hooks
   const [minis, setMinis] = useState([])
   const [categories, setCategories] = useState([])
   const [types, setTypes] = useState([])
@@ -34,15 +33,11 @@ const MiniOverview = () => {
   const [productSets, setProductSets] = useState([])
   const [baseSizes, setBaseSizes] = useState([])
   const [paintedByOptions, setPaintedByOptions] = useState([])
-  
-  // 3. State hooks - UI
   const [viewType, setViewType] = useState('table')
   const [currentPage, setCurrentPage] = useState(1)
   const [entriesPerPage, setEntriesPerPage] = useState(10)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
-
-  // 4. State hooks - modals
   const [showAddModal, setShowAddModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
   const [editingMini, setEditingMini] = useState(null)
@@ -51,13 +46,12 @@ const MiniOverview = () => {
   const [showViewer, setShowViewer] = useState(false)
   const [selectedMini, setSelectedMini] = useState(null)
   const [showProductSetInfo, setShowProductSetInfo] = useState(null)
-
-  // 5. State hooks - expanded rows
   const [expandedTagRows, setExpandedTagRows] = useState(new Set())
   const [expandedCategoryRows, setExpandedCategoryRows] = useState(new Set())
   const [expandedTypeRows, setExpandedTypeRows] = useState(new Set())
+  const [searchTerm, setSearchTerm] = useState('')
 
-  // 6. Effect hooks
+  // Effect hooks
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -123,6 +117,35 @@ const MiniOverview = () => {
     }
     fetchPaintedByOptions()
   }, [])
+
+  // Handlers
+  const handleSearchChange = (e) => {
+    setSearchTerm(e.target.value.toLowerCase())
+  }
+
+  const filteredMinis = minis.filter(mini => {
+    if (!mini) return false;
+    
+    const searchLower = searchTerm.toLowerCase();
+    
+    // Check name
+    const nameMatch = mini.name?.toLowerCase().includes(searchLower);
+    
+    // Check categories
+    const categoryMatch = mini.category_names?.toLowerCase().includes(searchLower);
+    
+    // Check types (both regular and proxy)
+    const typeMatch = mini.type_names?.toLowerCase().includes(searchLower) || 
+                     mini.proxy_type_names?.toLowerCase().includes(searchLower);
+    
+    // Check tags
+    const tagMatch = mini.tag_names?.toLowerCase().includes(searchLower);
+    
+    // Check location
+    const locationMatch = mini.location?.toLowerCase().includes(searchLower);
+
+    return nameMatch || categoryMatch || typeMatch || tagMatch || locationMatch;
+  });
 
   // Early returns for loading and error states
   if (loading) return <div>Loading...</div>
@@ -295,45 +318,60 @@ const MiniOverview = () => {
           title="Mini Overview"
           subtitle="View and manage your miniature collection"
         >
-          <div className="ms-auto d-flex align-items-center gap-3">
-            <div className="btn-group">
-              <Button 
-                variant={viewType === 'table' ? 'success' : 'dark'} 
-                className="border d-flex align-items-center px-3" 
-                onClick={() => setViewType('table')}
-                size="md"
-              >
-                <FontAwesomeIcon icon={faList} className="fs-6" />
-              </Button>
-              <Button 
-                variant={viewType === 'grid' ? 'success' : 'dark'} 
-                className="border d-flex align-items-center px-3" 
-                onClick={() => setViewType('grid')}
-                size="md"
-              >
-                <FontAwesomeIcon icon={faTableCells} className="fs-6" />
-              </Button>
-            </div>
-            <div className="d-inline-block">
-              <AddButton 
-                text="Add" 
-                onClick={() => setShowAddModal(true)}
-              />
+          <div className="ms-auto pe-0">
+            <div className="d-flex align-items-center gap-3">
+              <div className="btn-group">
+                <Button 
+                  variant={viewType === 'table' ? 'success' : 'dark'} 
+                  className="border d-flex align-items-center px-3" 
+                  onClick={() => setViewType('table')}
+                  size="md"
+                >
+                  <FontAwesomeIcon icon={faList} className="fs-6" />
+                </Button>
+                <Button 
+                  variant={viewType === 'grid' ? 'success' : 'dark'} 
+                  className="border d-flex align-items-center px-3" 
+                  onClick={() => setViewType('grid')}
+                  size="md"
+                >
+                  <FontAwesomeIcon icon={faTableCells} className="fs-6" />
+                </Button>
+              </div>
+              <div>
+                <AddButton 
+                  text="Add" 
+                  onClick={() => setShowAddModal(true)}
+                />
+              </div>
             </div>
           </div>
         </PageHeader>
 
         <div className="d-flex align-items-center mb-3 justify-content-end">
-          <span className="me-2">Show Entries</span>
+          {/* Search - Left aligned with me-auto */}
+          <div className="d-flex align-items-center me-auto">
+            <span className="me-2">Search:</span>
+            <Form.Control
+              type="text"
+              placeholder="Search..."
+              value={searchTerm}
+              onChange={handleSearchChange}
+              style={{ width: '200px' }}
+            />
+          </div>
+          
+          {/* Show Entries - Right aligned */}
+          <span className="me-2 text-end" style={{ width: '100px' }}>Show Entries:</span>
           <Form.Select 
+            size="sm" 
             value={entriesPerPage} 
             onChange={handleEntriesPerPageChange}
-            style={{ width: '60px' }}
+            style={{ width: '77px' }}
           >
             <option value="10">10</option>
             <option value="25">25</option>
             <option value="50">50</option>
-            <option value="100">100</option>
           </Form.Select>
         </div>
 
@@ -356,7 +394,7 @@ const MiniOverview = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {currentMinis.map((mini) => (
+                    {filteredMinis.map((mini) => (
                       <tr 
                         key={mini.id}
                         data-mini-id={mini.id}
@@ -373,9 +411,8 @@ const MiniOverview = () => {
                         </td>
                         <td className="align-middle">
                           <span 
-                            className="fw-bold"
-                            style={{ cursor: 'pointer' }}
-                            onClick={() => handleMiniNameClick(mini)}
+                          style={{ fontWeight: '100', fontSize: '0.8rem' }}
+                          onClick={() => handleMiniNameClick(mini)}
                           >
                             {mini.name}
                           </span>
@@ -463,6 +500,7 @@ const MiniOverview = () => {
                         </td>
                         <td 
                           className="align-middle"
+                          style={{ fontWeight: '100', fontSize: '0.8rem' }}
                           onMouseEnter={() => mini.product_set_name && mini.product_set_name !== '-' ? setShowProductSetInfo(mini.id) : null}
                           onMouseLeave={() => setShowProductSetInfo(null)}
                           ref={(el) => el && (el.dataset.miniId = mini.id)}

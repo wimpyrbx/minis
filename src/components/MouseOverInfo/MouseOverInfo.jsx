@@ -49,6 +49,7 @@ const MouseOverInfo = ({
       target={target}
       placement="left"
       offset={[-10, 0]}
+      transition={false}
       popperConfig={{
         modifiers: [
           {

@@ -59,4 +59,9 @@
 
 .pagination .page-item.active .page-link {
   box-shadow: none;
+}
+
+.pagination-wrapper {
+  margin-top: 1rem;
+  margin-bottom: 0;
 } 

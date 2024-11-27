@@ -330,36 +330,29 @@ const MinisAdmin = () => {
         iconColor="text-primary"
         title="Minis Admin"
         subtitle="Manage categories and types"
-      >
-        <div className="d-flex align-items-center justify-content-end">
-          <span className="text-muted me-2" style={{ fontSize: '0.875rem' }}>Show</span>
-          <Form.Select 
-            size="sm" 
-            value={entriesPerPage} 
-            onChange={handleEntriesPerPageChange}
-            style={{ 
-              width: '60px',
-              fontSize: '0.875rem',
-              padding: '0.25rem 0.5rem',
-              height: 'auto'
-            }}
-            className="mx-2"
-          >
-            <option value="10">10</option>
-            <option value="25">25</option>
-            <option value="50">50</option>
-          </Form.Select>
-          <span className="text-muted" style={{ fontSize: '0.875rem' }}>entries</span>
-        </div>
-      </PageHeader>
+      />
 
       {error && <Alert variant="danger" className="mb-4">{error}</Alert>}
+
+      <div className="d-flex align-items-center mb-3 justify-content-end">
+        <span className="me-2">Show Entries:</span>
+        <Form.Select 
+          size="sm" 
+          value={entriesPerPage} 
+          onChange={handleEntriesPerPageChange}
+          style={{ width: '70px' }}
+        >
+          <option value="10">10</option>
+          <option value="25">25</option>
+          <option value="50">50</option>
+        </Form.Select>
+      </div>
 
       <Row>
         {/* Categories Card */}
         <Col md={5}>
           <Card className="mb-4">
-            <Card.Body className="pb-0 pt-2">
+            <Card.Body className="pb-2 pt-2">
               <div className="d-flex justify-content-between align-items-center mb-2" style={{ minHeight: '32px' }}>
                 <div className="d-flex align-items-center">
                   <FontAwesomeIcon icon={faLayerGroup} className="text-info me-2" />
@@ -398,11 +391,13 @@ const MinisAdmin = () => {
                 data={getPaginatedData(categories, categoriesPage, entriesPerPage)}
                 renderCell={renderCell}
               />
-              <PaginationControl
-                currentPage={categoriesPage}
-                totalPages={getTotalPages(categories.length, entriesPerPage)}
-                onPageChange={setCategoriesPage}
-              />
+              <div className="d-flex justify-content-center" style={{ marginTop: '-10px', marginBottom: '10px' }}>
+                <PaginationControl
+                  currentPage={categoriesPage}
+                  totalPages={getTotalPages(categories.length, entriesPerPage)}
+                  onPageChange={setCategoriesPage}
+                />
+              </div>
             </Card.Body>
           </Card>
         </Col>
@@ -410,7 +405,7 @@ const MinisAdmin = () => {
         {/* Types Card */}
         <Col md={7}>
           <Card>
-            <Card.Body className="pb-0 pt-2">
+            <Card.Body className="pb-2 pt-2">
               <div className="d-flex justify-content-between align-items-center mb-2" style={{ minHeight: '32px' }}>
                 <div className="d-flex align-items-center">
                   <FontAwesomeIcon icon={faCube} className="text-info me-2" />
@@ -557,11 +552,13 @@ const MinisAdmin = () => {
                     data={getPaginatedData(getFilteredTypes(), typesPage, entriesPerPage)}
                     renderCell={renderCell}
                   />
-                  <PaginationControl
-                    currentPage={typesPage}
-                    totalPages={getTotalPages(getFilteredTypes().length, entriesPerPage)}
-                    onPageChange={setTypesPage}
-                  />
+                  <div className="d-flex justify-content-center" style={{ marginTop: '-10px', marginBottom: '10px' }}>
+                    <PaginationControl
+                      currentPage={typesPage}
+                      totalPages={getTotalPages(getFilteredTypes().length, entriesPerPage)}
+                      onPageChange={setTypesPage}
+                    />
+                  </div>
                 </>
               ) : (
                 <div className="text-center py-3 text-muted">
